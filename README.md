@@ -67,5 +67,7 @@ WORKDIR /home/gymuser/isaac_rover
 11. bash docker/run.sh DISPLAYPORT
 12. Enter container from different terminals --- sudo docker exec -it isaacgym_container bash 
   
+13. cd isaac_rover 
+14. pip install -e .
 
 <!---</details>--->
