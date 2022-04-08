@@ -12,8 +12,6 @@ import torchgeometry as tgm
 from isaacgym import gymutil, gymtorch, gymapi
 from scipy.spatial.transform import Rotation as R
 from utils.kinematics import Ackermann
-from tasks.camera import camera
-
 
 class Exomy_actual(VecTask):
 
@@ -152,8 +150,8 @@ class Exomy_actual(VecTask):
 
     def _create_envs(self,num_envs,spacing, num_per_row):
        # define plane on which environments are initialized
-        lower = gymapi.Vec3(0.5 * -spacing, -spacing, 0.0)
-        upper = gymapi.Vec3(0.5 * spacing, spacing, spacing)
+        lower = gymapi.Vec3(0.1 * -spacing, -spacing, 0.0)
+        upper = gymapi.Vec3(0.1 * spacing, spacing, spacing)
 
         asset_root = "../assets"
         exomy_asset_file = "urdf/exomy_modelv2/urdf/exomy_model.urdf"
@@ -230,9 +228,6 @@ class Exomy_actual(VecTask):
         marker_options = gymapi.AssetOptions()
         marker_options.fix_base_link = True
         marker_asset = self.gym.create_sphere(self.sim, 0.1, marker_options)
-
-        #self.cameras = camera()
-
         for i in range(num_envs):
             # Create environment
             env0 = self.gym.create_env(self.sim, lower, upper, num_per_row)
@@ -257,7 +252,6 @@ class Exomy_actual(VecTask):
             # Set DOF control properties
             self.gym.set_actor_dof_properties(env0, exomy0_handle, exomy_dof_props)
             #print(self.gym.get_actor_dof_properties((env0, exomy0_handle))
-            #self.cameras.add_camera(env0, self.gym, exomy0_handle)
 
             # Spawn marker
             marker_handle = self.gym.create_actor(env0, marker_asset, default_pose, "marker", i, 1, 1)
@@ -421,14 +415,13 @@ class Exomy_actual(VecTask):
         #    - e.g. compute reward, compute observations
         
         self.progress_buf += 1
-        #self.cameras.render_cameras(self.gym, self.sim)
         #print(torch.max(self.progress_buf))
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
         root_quat = R.from_quat(self.root_quats.cpu())
         self.root_euler = torch.from_numpy(root_quat.as_euler('xyz')).to(self.device)
         #self.root_euler = tgm.quaternion_to_angle_axis(self.root_quats)
-        time = torch.tensor(self.dt)
+
         
         
 
@@ -460,13 +453,13 @@ class Exomy_actual(VecTask):
 
         self.rew_buf[:], self.reset_buf[:] = compute_exomy_reward(self.root_positions,
             self.target_root_positions, self.root_quats, self.root_euler,
-            self.reset_buf, self.progress_buf, self.max_episode_length, self.dt)        
+            self.reset_buf, self.progress_buf, self.max_episode_length)        
 
 
 @torch.jit.script
 def compute_exomy_reward(root_positions, target_root_positions,
-        root_quats, root_euler, reset_buf, progress_buf, max_episode_length, dt):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, float) -> Tuple[Tensor, Tensor]
+        root_quats, root_euler, reset_buf, progress_buf, max_episode_length):
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float) -> Tuple[Tensor, Tensor]
     # distance to target
     #target_heading = torch.tensor(len(target_root_positions))
     target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
@@ -498,11 +491,10 @@ def compute_exomy_reward(root_positions, target_root_positions,
     #     print(root_euler[torch.argmax(heading_diff)])
     #     print(root_positions[torch.argmax(heading_diff)])
     #     print(target_root_positions[torch.argmax(heading_diff)])
-    
-    
+        
 
-    reward = pos_reward - 0.1
-    #print(reward)
+
+    reward = pos_reward
     #print(reward[0:10])
     #print((torch.max(reward), torch.argmax(reward)))
 
