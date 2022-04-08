@@ -1,4 +1,3 @@
-
 import math
 from cmath import inf
 import numpy as np
@@ -11,8 +10,9 @@ from tasks.base.vec_task import VecTask
 #from utils.kinematics import Rover
 
 from isaacgym import gymutil, gymtorch, gymapi
+from isaacgym.terrain_utils import *
 
-class Exomy(VecTask):
+class Exomy_terrain(VecTask):
 
     def __init__(self, cfg, sim_device, graphics_device_id, headless):
 
@@ -29,6 +29,8 @@ class Exomy(VecTask):
         
         cam_pos = gymapi.Vec3(-1.0, -0.6, 0.8)
         cam_target = gymapi.Vec3(1.0, 1.0, 0.15)
+        #cam_props = gymapi.CameraProperties()
+        #viewer = self.gym.create_viewer(self.sim, cam_props)
         self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
 
         self.frame_count = 0 #used for pointcloud
@@ -66,11 +68,69 @@ class Exomy(VecTask):
 
 
     def _create_ground_plane(self):
-        plane_params = gymapi.PlaneParams()
-        # set the nroaml force to be z dimension
-        plane_params.normal = gymapi.Vec3(0.0,0.0,1.0)
-        self.gym.add_ground(self.sim, plane_params)
         
+        ############## En type terræn hele vejen
+        """
+        terrain_width = 64.
+        terrain_length = 128.
+        #plane_params = gymapi.PlaneParams()
+        horizontal_scale = 0.5 # [m]
+        vertical_scale = 0.005  # [m]
+        num_rows = int(terrain_width/horizontal_scale)
+        num_cols = int(terrain_length/horizontal_scale)
+        #num_rows = int(plane_params/horizontal_scale)
+        #num_cols = int(plane_params/horizontal_scale)
+        heightfield = np.zeros((num_rows, num_cols), dtype=np.int16)
+
+        def new_sub_terrain(): return SubTerrain(width=num_rows, length=num_cols, vertical_scale=vertical_scale, horizontal_scale=horizontal_scale)
+
+        #heightfield[0:num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=2., amplitude=1.).height_field_raw
+        heightfield[0:num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.1, max_height=0.1, step=0.1, downsampled_scale=0.5).height_field_raw
+        """
+        ######################## 8 blandede terræn sektioner
+        num_terains = 8
+        terrain_width = 8.
+        terrain_length = 128.
+        horizontal_scale = 0.25  # [m]
+        vertical_scale = 0.005  # [m]
+        num_rows = int(terrain_width/horizontal_scale)
+        num_cols = int(terrain_length/horizontal_scale)
+        heightfield = np.zeros((num_terains*num_rows, num_cols), dtype=np.int16)
+
+
+        def new_sub_terrain(): return SubTerrain(width=num_rows, length=num_cols, vertical_scale=vertical_scale, horizontal_scale=horizontal_scale)
+
+
+        heightfield[0:num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.2, max_height=0.2, step=0.2, downsampled_scale=0.5).height_field_raw
+        heightfield[num_rows:2*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=20., amplitude=1.).height_field_raw
+        heightfield[2*num_rows:3*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=5., num_rects=20).height_field_raw
+        heightfield[3*num_rows:4*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.2, max_height=0.2, step=0.2, downsampled_scale=0.5).height_field_raw
+        heightfield[4*num_rows:5*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.2, max_height=0.2, step=0.2, downsampled_scale=0.5).height_field_raw
+        heightfield[5*num_rows:6*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=20., amplitude=1.).height_field_raw
+        heightfield[6*num_rows:7*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=20., amplitude=1.).height_field_raw
+        heightfield[7*num_rows:8*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=20., amplitude=1.).height_field_raw
+        #####################################################################
+        #heightfield[0:num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.2, max_height=0.2, step=0.2, downsampled_scale=0.5).height_field_raw
+        #heightfield[num_rows:2*num_rows, :] = sloped_terrain(new_sub_terrain(), slope=-0.5).height_field_raw
+        #heightfield[2*num_rows:3*num_rows, :] = pyramid_sloped_terrain(new_sub_terrain(), slope=-0.5).height_field_raw
+        #heightfield[3*num_rows:4*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=5., num_rects=20).height_field_raw
+        #heightfield[4*num_rows:5*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=2., amplitude=1.).height_field_raw
+        #heightfield[5*num_rows:6*num_rows, :] = stairs_terrain(new_sub_terrain(), step_width=0.75, step_height=-0.5).height_field_raw
+        #heightfield[6*num_rows:7*num_rows, :] = pyramid_stairs_terrain(new_sub_terrain(), step_width=0.75, step_height=-0.5).height_field_raw
+        #heightfield[7*num_rows:8*num_rows, :] = stepping_stones_terrain(new_sub_terrain(), stone_size=1.,
+        #                                                        stone_distance=1., max_height=0.5, platform_size=0.).height_field_raw
+        #####################################################################
+
+        # add the terrain as a triangle mesh
+        vertices, triangles = convert_heightfield_to_trimesh(heightfield, horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=3.5)
+        tm_params = gymapi.TriangleMeshParams()
+        tm_params.nb_vertices = vertices.shape[0]
+        tm_params.nb_triangles = triangles.shape[0]
+        tm_params.transform.p.x = -1.
+        tm_params.transform.p.y = -1.
+        self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
+        
+
     def _create_envs(self,num_envs,spacing, num_per_row):
        # define plane on which environments are initialized
         lower = gymapi.Vec3(0.5 * -spacing, -spacing, 0.0)
@@ -210,6 +270,8 @@ class Exomy(VecTask):
 
     def compute_rewards(self):
         pass      
+
+
 
 @torch.jit.script
 def compute_exomy_reward(root_positions, target_root_positions, reset_buf, progress_buf, max_episode_length):
