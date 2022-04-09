@@ -45,36 +45,36 @@ def Ackermann(lin_vel, ang_vel):
     #         Steering angles calculation 
     #         """   
     # If the ang_vel is 0, the steering angles is set to 0:
-    steering_angles[:,0] = torch.where(steering_condition0, 0, steering_angles[:,0])
-    steering_angles[:,1] = torch.where(steering_condition0, 0, steering_angles[:,1])
-    steering_angles[:,2] = torch.where(steering_condition0, 0, steering_angles[:,2])
-    steering_angles[:,3] = torch.where(steering_condition0, 0, steering_angles[:,3])
-    steering_angles[:,4] = torch.where(steering_condition0, 0, steering_angles[:,4])
-    steering_angles[:,5] = torch.where(steering_condition0, 0, steering_angles[:,5])
+    #steering_angles[:,0] = torch.where(steering_condition0, 0, steering_angles[:,0])
+    #steering_angles[:,1] = torch.where(steering_condition0, 0, steering_angles[:,1])
+    #steering_angles[:,2] = torch.where(steering_condition0, 0, steering_angles[:,2])
+    #steering_angles[:,3] = torch.where(steering_condition0, 0, steering_angles[:,3])
+    #steering_angles[:,4] = torch.where(steering_condition0, 0, steering_angles[:,4])
+    #steering_angles[:,5] = torch.where(steering_condition0, 0, steering_angles[:,5])
 
     # If the turning point is within the chassis of the robot, turn on the spot:
     turn_on_the_spot_top = torch.tensor(torch.atan2(y_top,x_side),device='cuda:0').repeat(lin_vel.size(dim=0))
     turn_on_the_spot_bottom = torch.tensor(torch.atan2(y_bottom,x_side),device='cuda:0').repeat(lin_vel.size(dim=0))
     steering_angles[:,0] = torch.where(steering_condition1, turn_on_the_spot_top, steering_angles[:,0])
     steering_angles[:,1] = torch.where(steering_condition1, -turn_on_the_spot_top, steering_angles[:,1])
-    steering_angles[:,2] = torch.where(steering_condition1, 0, steering_angles[:,2])
-    steering_angles[:,3] = torch.where(steering_condition1, 0, steering_angles[:,3])
+    #steering_angles[:,2] = torch.where(steering_condition1, 0, steering_angles[:,2])
+    #steering_angles[:,3] = torch.where(steering_condition1, 0, steering_angles[:,3])
     steering_angles[:,4] = torch.where(steering_condition1, -turn_on_the_spot_bottom, steering_angles[:,4])
     steering_angles[:,5] = torch.where(steering_condition1, turn_on_the_spot_bottom, steering_angles[:,5])
     
     # Steering angles if turning anticlockwise moving forward or clockwise moving backwards
     steering_angles[:,0] = torch.where(steering_condition2, -torch.atan2(y_top_tensor,(radius-x_side)), steering_angles[:,0])
     steering_angles[:,1] = torch.where(steering_condition2, -torch.atan2(y_top_tensor,(radius+x_side)), steering_angles[:,1])
-    steering_angles[:,2] = torch.where(steering_condition2, 0, steering_angles[:,2])
-    steering_angles[:,3] = torch.where(steering_condition2, 0, steering_angles[:,3])
+    #steering_angles[:,2] = torch.where(steering_condition2, 0, steering_angles[:,2])
+    #steering_angles[:,3] = torch.where(steering_condition2, 0, steering_angles[:,3])
     steering_angles[:,4] = torch.where(steering_condition2, torch.atan2(y_bottom_tensor,(radius-x_side)), steering_angles[:,4])
     steering_angles[:,5] = torch.where(steering_condition2, torch.atan2(y_bottom_tensor,(radius+x_side)), steering_angles[:,5])
 
     # Steering angles if turning clockwise moving forward or anticlockwise moving backwards
     steering_angles[:,0] = torch.where(steering_condition3,torch.atan2(y_top_tensor,(radius+x_side)), steering_angles[:,0])
     steering_angles[:,1] = torch.where(steering_condition3,torch.atan2(y_top_tensor,(radius-x_side)), steering_angles[:,1])
-    steering_angles[:,2] = torch.where(steering_condition3, 0, steering_angles[:,2])
-    steering_angles[:,3] = torch.where(steering_condition3, 0, steering_angles[:,3])
+    #steering_angles[:,2] = torch.where(steering_condition3, 0, steering_angles[:,2])
+    #steering_angles[:,3] = torch.where(steering_condition3, 0, steering_angles[:,3])
     steering_angles[:,4] = torch.where(steering_condition3,-torch.atan2(y_bottom_tensor,(radius+x_side)), steering_angles[:,4])
     steering_angles[:,5] = torch.where(steering_condition3,-torch.atan2(y_bottom_tensor,(radius-x_side)), steering_angles[:,5])
 

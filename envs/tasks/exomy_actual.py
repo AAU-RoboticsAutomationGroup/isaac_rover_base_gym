@@ -11,7 +11,7 @@ from tasks.base.vec_task import VecTask
 import torchgeometry as tgm
 from isaacgym import gymutil, gymtorch, gymapi
 from scipy.spatial.transform import Rotation as R
-from utils.kinematics import Ackermann
+from utils.kinematicsUpdated import Ackermann
 from tasks.camera import camera
 
 
