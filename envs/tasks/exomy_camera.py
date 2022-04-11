@@ -14,7 +14,7 @@ from scipy.spatial.transform import Rotation as R
 from utils.kinematicsUpdated import Ackermann
 from tasks.camera import camera
 
-
+#dis is sjit
 class Exomy_camera(VecTask):
 
     def __init__(self, cfg, sim_device, graphics_device_id, headless):
