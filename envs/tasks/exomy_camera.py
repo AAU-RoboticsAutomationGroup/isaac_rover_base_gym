@@ -13,6 +13,7 @@ from isaacgym import gymutil, gymtorch, gymapi
 from scipy.spatial.transform import Rotation as R
 from utils.kinematicsUpdated import Ackermann
 from tasks.camera import camera
+from tasks.visualize import visualize
 
 
 class Exomy_camera(VecTask):
@@ -422,7 +423,12 @@ class Exomy_camera(VecTask):
         #    - e.g. compute reward, compute observations
         
         self.progress_buf += 1
+
         self.cameras.render_cameras(self.gym, self.sim)
+        self.visualization = visualize()
+        camera_visualization = "_cam.png" 
+        self.visualization.show_image(self.envs[1], self.exomy_handles[1], self.gym, self.sim, camera_visualization, gymapi.IMAGE_DEPTH)
+
         #print(torch.max(self.progress_buf))
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
