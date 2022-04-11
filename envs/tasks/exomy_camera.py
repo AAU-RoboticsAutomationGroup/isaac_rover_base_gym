@@ -1,3 +1,4 @@
+
 import math
 import numpy as np
 import os
@@ -12,18 +13,9 @@ from isaacgym import gymutil, gymtorch, gymapi
 from scipy.spatial.transform import Rotation as R
 from utils.kinematicsUpdated import Ackermann
 from tasks.camera import camera
-from isaacgym.terrain_utils import *
 
 
-##################################################
-# Implemented so far
-##################################################
-# Exomy_actual - 11/04 kl. 10:35 
-# Exomy_terrain - 11/04 kl. 10:35
-    # 1 uniform terrain instead of 8 different
-
-
-class Exomy(VecTask):
+class Exomy_camera(VecTask):
 
     def __init__(self, cfg, sim_device, graphics_device_id, headless):
 
@@ -130,31 +122,11 @@ class Exomy(VecTask):
 
 
     def _create_ground_plane(self):
-        terrain_width = 20.
-        terrain_length = 60.
-        #plane_params = gymapi.PlaneParams()
-        horizontal_scale = 0.5 # [m]
-        vertical_scale = 0.005  # [m]
-        num_rows = int(terrain_width/horizontal_scale)
-        num_cols = int(terrain_length/horizontal_scale)
-        #num_rows = int(plane_params/horizontal_scale)
-        #num_cols = int(plane_params/horizontal_scale)
-        heightfield = np.zeros((num_rows, num_cols), dtype=np.int16)
-
-        def new_sub_terrain(): return SubTerrain(width=num_rows, length=num_cols, vertical_scale=vertical_scale, horizontal_scale=horizontal_scale)
-
-        heightfield[0:num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=10., amplitude=0.5).height_field_raw
-        #heightfield[0:num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.1, max_height=0.1, step=0.1, downsampled_scale=0.5).height_field_raw
-
-        # add the terrain as a triangle mesh
-        vertices, triangles = convert_heightfield_to_trimesh(heightfield, horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=3.5)
-        tm_params = gymapi.TriangleMeshParams()
-        tm_params.nb_vertices = vertices.shape[0]
-        tm_params.nb_triangles = triangles.shape[0]
-        tm_params.transform.p.x = -1.
-        tm_params.transform.p.y = -1.
-        self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
-
+        plane_params = gymapi.PlaneParams()
+        # set the nroaml force to be z dimension
+        plane_params.normal = gymapi.Vec3(0.0,0.0,1.0)
+        self.gym.add_ground(self.sim, plane_params)
+    
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
         # set target position randomly with x, y in (-2, 2) and z in (1, 2)
@@ -389,6 +361,18 @@ class Exomy(VecTask):
         _actions[:,1] = _actions[:,1] * 3
         steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
         
+        # actions_tensor[1::15]=(_actions[:,0]) * self.max_effort_pos  #1  #LF POS
+        # actions_tensor[2::15]=(_actions[:,1]) * self.max_effort_vel #2  #LF DRIVE
+        # actions_tensor[3::15]=(_actions[:,2]) * self.max_effort_pos #3  #LM POS
+        # actions_tensor[4::15]=(_actions[:,3]) * self.max_effort_vel #4  #LM DRIVE
+        # actions_tensor[6::15]=(_actions[:,4]) * self.max_effort_pos #6  #LR POS
+        # actions_tensor[7::15]=(_actions[:,5]) * self.max_effort_vel #7  #LR DRIVE
+        # actions_tensor[8::15]=(_actions[:,6]) * self.max_effort_pos #8  #RR POS
+        # actions_tensor[9::15]=(_actions[:,7]) * self.max_effort_vel #9  #RR DRIVE
+        # actions_tensor[11::15]=(_actions[:,8]) * self.max_effort_pos #11 #RF POS 
+        # actions_tensor[12::15]= (_actions[:,9]) * self.max_effort_vel #12 #RF DRIVE
+        # actions_tensor[13::15]=(_actions[:,10]) * self.max_effort_pos #13 #RM POS
+        # actions_tensor[14::15]=(_actions[:,11]) * self.max_effort_vel #14 #RM DRIVE
         actions_tensor[1::15]=(steering_angles[:,2])   #1  #ML POS
         actions_tensor[2::15]=(motor_velocities[:,2])  #2  #ML DRIVE
         actions_tensor[3::15]=(steering_angles[:,0])   #3   #FL POS
@@ -403,6 +387,30 @@ class Exomy(VecTask):
         actions_tensor[14::15]=(motor_velocities[:,1]) #14 #FR DRIVE
         #print(motor_velocities[:,0])
 
+
+
+
+        # actions_tensor[1::15] = -math.pi/4 #1  #ML POS
+        # actions_tensor[2::15] = 0 #2  #ML DRIVE
+        # actions_tensor[3::15] = -math.pi/4 #3  #FL POS
+        # actions_tensor[4::15] = 0 #4  #FL DRIVE
+        # actions_tensor[6::15] = -math.pi/4 #6  #RL POS
+        # actions_tensor[7::15] = 0 #7  #RL DRIVE
+        # actions_tensor[8::15] = -math.pi/4 #8  #RR POS
+        # actions_tensor[9::15] = 0 #9  #RR DRIVE
+        # actions_tensor[11::15] = -math.pi/4 #11 #MR POS 
+        # actions_tensor[12::15] = 0 #12 #MR DRIVE
+        # actions_tensor[13::15] = -math.pi/4 #13 #FR POS
+        # actions_tensor[14::15] = 0 #14 #FR DRIVE
+        # speed =10
+        # actions_tensor[0] = 100 #BOTH REAR DRIVE        # actions_tensor[3] = 0
+        # actions_tensor[2] = speed 
+        # actions_tensor[4] = speed 
+        # actions_tensor[7] = speed 
+        # actions_tensor[9] = speed 
+        # actions_tensor[12] = speed
+        
+        # actions_tensor[14] = speed
         # 
         self.gym.set_dof_velocity_target_tensor(self.sim, gymtorch.unwrap_tensor(actions_tensor)) #)
         self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(actions_tensor)) #)

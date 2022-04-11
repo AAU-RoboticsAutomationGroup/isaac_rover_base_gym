@@ -15,7 +15,7 @@ from utils.kinematicsUpdated import Ackermann
 from tasks.camera import camera
 
 
-class Exomy_actual(VecTask):
+class Exomy_reward(VecTask):
 
     def __init__(self, cfg, sim_device, graphics_device_id, headless):
 

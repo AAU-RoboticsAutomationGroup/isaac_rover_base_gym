@@ -28,12 +28,13 @@
 
 from tasks.exomy import Exomy
 from tasks.exomy_terrain import Exomy_terrain
-from envs.tasks.exomy_actual import Exomy_actual
-#from tasks.exomy_actual import Exomy_actual
+from tasks.exomy_reward import Exomy_reward
+from tasks.exomy_camera import Exomy_camera
 
 # Mappings from strings to environments
 isaacgym_task_map = {
     "Exomy": Exomy,
     "Exomy_terrain": Exomy_terrain,
-    "Exomy_actual": Exomy_actual,
+    "Exomy_reward": Exomy_reward,
+    "Exomy_camera": Exomy_camera,
 }
