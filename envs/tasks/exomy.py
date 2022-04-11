@@ -18,7 +18,7 @@ from isaacgym.terrain_utils import *
 ##################################################
 # Implemented so far
 ##################################################
-# Exomy_actual - 11/04 kl. 10:35 
+# Exomy_reward - 11/04 kl. 10:35 
 # Exomy_terrain - 11/04 kl. 10:35
     # 1 uniform terrain instead of 8 different
 
