@@ -44,7 +44,7 @@ class Exomy_terrain(VecTask):
         #    - set up gravity
         self.sim_params.gravity.x = 0
         self.sim_params.gravity.y = 0
-        self.sim_params.gravity.z = -3.721  
+        self.sim_params.gravity.z = -9.82
         #    - call super().create_sim with device args (see docstring)
         self.sim = super().create_sim(self.device_id, self.graphics_device_id, self.physics_engine, self.sim_params)
 
@@ -200,7 +200,7 @@ class Exomy_terrain(VecTask):
         exomy_dof_props["damping"].fill(0.01)
         exomy_dof_props["friction"].fill(0.5)
         pose = gymapi.Transform()
-        pose.p.z = 0.2
+        pose.p.z = 0.4
         # asset is rotated z-up by default, no additional rotations needed
         pose.r = gymapi.Quat(0.0, 0.0, 1.0, 0.0)
 
