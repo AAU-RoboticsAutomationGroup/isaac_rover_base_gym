@@ -360,6 +360,7 @@ class Exomy_actual(VecTask):
         _actions[:,0] = _actions[:,0] * 3
         _actions[:,1] = _actions[:,1] * 3
         steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
+        
         # actions_tensor[1::15]=(_actions[:,0]) * self.max_effort_pos  #1  #LF POS
         # actions_tensor[2::15]=(_actions[:,1]) * self.max_effort_vel #2  #LF DRIVE
         # actions_tensor[3::15]=(_actions[:,2]) * self.max_effort_pos #3  #LM POS

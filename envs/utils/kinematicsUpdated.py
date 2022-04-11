@@ -37,7 +37,7 @@ def Ackermann(lin_vel, ang_vel):
     #         """
     #         Steering angles conditions 
     #         """
-    steering_condition0 = (ang_vel == 0)
+    #steering_condition0 = (ang_vel == 0)
     steering_condition1 = (radius <= x_side)
     steering_condition2 = ((torch.logical_not(radius <= x_side)) & (((ang_vel > 0) & ((torch.sign(lin_vel) > 0))) | ((ang_vel < 0) & ((torch.sign(lin_vel)) < 0))))
     steering_condition3 = ((torch.logical_not(radius <= x_side)) & (((ang_vel < 0) & ((torch.sign(lin_vel) > 0))) | ((ang_vel > 0) & ((torch.sign(lin_vel)) < 0))))
@@ -51,14 +51,14 @@ def Ackermann(lin_vel, ang_vel):
     #steering_angles[:,3] = torch.where(steering_condition0, 0, steering_angles[:,3])
     #steering_angles[:,4] = torch.where(steering_condition0, 0, steering_angles[:,4])
     #steering_angles[:,5] = torch.where(steering_condition0, 0, steering_angles[:,5])
-
+    
     # If the turning point is within the chassis of the robot, turn on the spot:
     turn_on_the_spot_top = torch.tensor(torch.atan2(y_top,x_side),device='cuda:0').repeat(lin_vel.size(dim=0))
     turn_on_the_spot_bottom = torch.tensor(torch.atan2(y_bottom,x_side),device='cuda:0').repeat(lin_vel.size(dim=0))
     steering_angles[:,0] = torch.where(steering_condition1, turn_on_the_spot_top, steering_angles[:,0])
     steering_angles[:,1] = torch.where(steering_condition1, -turn_on_the_spot_top, steering_angles[:,1])
     #steering_angles[:,2] = torch.where(steering_condition1, 0, steering_angles[:,2])
-    #steering_angles[:,3] = torch.where(steering_condition1, 0, steering_angles[:,3])
+    #steering_angles[:,3] = torch.where(steering_condition1 0, steering_angles[:,3])
     steering_angles[:,4] = torch.where(steering_condition1, -turn_on_the_spot_bottom, steering_angles[:,4])
     steering_angles[:,5] = torch.where(steering_condition1, turn_on_the_spot_bottom, steering_angles[:,5])
     

@@ -28,7 +28,7 @@
 
 from tasks.exomy import Exomy
 from tasks.exomy_terrain import Exomy_terrain
-from tasks.exomy_actual import Exomy_actual
+from envs.tasks.exomy_actual import Exomy_actual
 #from tasks.exomy_actual import Exomy_actual
 
 # Mappings from strings to environments
