@@ -2,6 +2,7 @@ import math
 from cmath import inf
 import numpy as np
 import os
+import scipy as sp
 import torch
 import xml.etree.ElementTree as ET
 
@@ -134,8 +135,8 @@ class Exomy_terrain(VecTask):
 
     def _create_envs(self,num_envs,spacing, num_per_row):
        # define plane on which environments are initialized
-        lower = gymapi.Vec3(0.5 * -spacing, -spacing, 0.0)
-        upper = gymapi.Vec3(spacing, spacing, spacing)
+        lower = gymapi.Vec3(0.01*-spacing, -spacing, 0.0)
+        upper = gymapi.Vec3(0.01*spacing, spacing, 1)
 
         asset_root = "../assets"
         exomy_asset_file = "urdf/exomy_model/urdf/exomy_model.urdf"
