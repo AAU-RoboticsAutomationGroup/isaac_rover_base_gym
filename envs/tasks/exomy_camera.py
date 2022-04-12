@@ -257,7 +257,7 @@ class Exomy_camera(VecTask):
             # Set initial DOF states
             # gym.set_actor_dof_states(env0, exomy0_handle, default_dof_state, gymapi.STATE_ALL)
             # Set DOF control properties
-            self.gym.set_actor_dof_properties(env0, exomy0_handle, exomy_dof_props)
+            self.gym.set_actor_dof_properties(env0, exomy0_handle, exomy_dof_props, self.sim)
             #print(self.gym.get_actor_dof_properties((env0, exomy0_handle))
             self.cameras.add_camera(env0, self.gym, exomy0_handle)
             # self.cameras.create_static_sphere(self.gym, self.sim, env0, exomy0_handle, i)
@@ -428,6 +428,12 @@ class Exomy_camera(VecTask):
         self.progress_buf += 1
 
         self.cameras.render_cameras(self.gym, self.sim)
+
+        
+        # self.gym.start_access_image_tensors(self.sim)
+        ## i thinks have to go in here
+        # self.gym.end_access_image_tensors(self.sim)   
+
         self.visualization = visualize()
         camera_visualization = "_cam.png" 
         self.visualization.show_image(self.envs[0], self.exomy_handles[0], self.gym, self.sim, camera_visualization, gymapi.IMAGE_COLOR)
