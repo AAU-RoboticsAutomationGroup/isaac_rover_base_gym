@@ -1,5 +1,7 @@
 
 import math
+
+from gym import Env
 import numpy as np
 import os
 import torch
@@ -233,13 +235,12 @@ class Exomy_camera(VecTask):
         marker_asset = self.gym.create_sphere(self.sim, 0.1, marker_options)
 
         self.cameras = camera()
-
+       
         for i in range(num_envs):
             # Create environment
             env0 = self.gym.create_env(self.sim, lower, upper, num_per_row)
             self.envs.append(env0)
-
-            
+          
             exomy0_handle = self.gym.create_actor(
                 env0,  # Environment Handle
                 exomy_asset,  # Asset Handle
@@ -259,10 +260,12 @@ class Exomy_camera(VecTask):
             self.gym.set_actor_dof_properties(env0, exomy0_handle, exomy_dof_props)
             #print(self.gym.get_actor_dof_properties((env0, exomy0_handle))
             self.cameras.add_camera(env0, self.gym, exomy0_handle)
+            # self.cameras.create_static_sphere(self.gym, self.sim, env0, exomy0_handle, i)
 
             # Spawn marker
             marker_handle = self.gym.create_actor(env0, marker_asset, default_pose, "marker", i, 1, 1)
             self.gym.set_rigid_body_color(env0, marker_handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(1, 0, 0))
+
 
     def reset_idx(self, env_ids):
         # set rotor speeds
@@ -427,7 +430,9 @@ class Exomy_camera(VecTask):
         self.cameras.render_cameras(self.gym, self.sim)
         self.visualization = visualize()
         camera_visualization = "_cam.png" 
-        self.visualization.show_image(self.envs[1], self.exomy_handles[1], self.gym, self.sim, camera_visualization, gymapi.IMAGE_DEPTH)
+        self.visualization.show_image(self.envs[0], self.exomy_handles[0], self.gym, self.sim, camera_visualization, gymapi.IMAGE_COLOR)
+        # color_image = self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_COLOR)
+    
 
         #print(torch.max(self.progress_buf))
         self.gym.refresh_actor_root_state_tensor(self.sim)

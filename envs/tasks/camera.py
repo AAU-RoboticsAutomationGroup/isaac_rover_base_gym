@@ -21,7 +21,6 @@ class camera:
         self.camera_handles = []
         print("Camera class initialized!")
 
-
     
     def add_camera(self, env, gym, exo_handle):
         '''
@@ -32,7 +31,7 @@ class camera:
         # Add handle to camera_handles
         self.camera_handles.append(camera_handle)
         # Get body handle from robot
-        body_handle = gym.get_actor_rigid_body_handle(env, exo_handle, 18)
+        body_handle = gym.get_actor_rigid_body_handle(env, exo_handle, 7)
         # Attatch camera to body using handles
         gym.attach_camera_to_body(camera_handle, env, body_handle, self.local_transform, gymapi.FOLLOW_TRANSFORM)
 
@@ -42,14 +41,14 @@ class camera:
         Pause the simulation at first timestep to confirm location of sphere.
         '''
         # Set marker options and create sphere
-        marker_options = gymapi.AssetOptions()
-        marker_options.fix_base_link = True
-        marker_asset = gym.create_sphere(sim, 0.02, marker_options)
+        marker_options_cam = gymapi.AssetOptions()
+        marker_options_cam.fix_base_link = True
+        marker_asset_cam = gym.create_sphere(sim, 0.02, marker_options_cam)
         # Get body handle from robot
         body_handle = gym.get_actor_rigid_body_handle(env, exo_handle, 18)
         body_transform = gym.get_rigid_transform(env,body_handle)
 
-        marker_handle = gym.create_actor(env, marker_asset, body_transform, "marker", collision_it, 1, 1)
+        marker_handle = gym.create_actor(env, marker_asset_cam, body_transform, "marker", collision_it, 1, 1)
         gym.set_rigid_body_color(env, marker_handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(1, 0, 0))
 
     def render_cameras(self, gym, sim):
