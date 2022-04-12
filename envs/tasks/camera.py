@@ -14,15 +14,17 @@ class camera:
         self.camera_props.height = 240    #Pixels height
         self.camera_props.near_plane = 0.16
         self.camera_props.far_plane = 3
+        self.camera_props.enable_tensor = True
         #Placement of camera
         self.local_transform = gymapi.Transform()
         self.local_transform.p = gymapi.Vec3(0,0,0.01) #Units in meters, (X, Y, Z) - X-up/down, Y-Side, Z-forwards/backwards
         self.local_transform.r = gymapi.Quat.from_euler_zyx(np.radians(180.0), np.radians(-119.0), np.radians(0.0))
         self.camera_handles = []
+        self.cam_tensors = []
         print("Camera class initialized!")
 
     
-    def add_camera(self, env, gym, exo_handle):
+    def add_camera(self, env, gym, exo_handle, sim):
         '''
         Add camera to an ExoMy instance using an ExoMy_handle
         '''
@@ -30,6 +32,11 @@ class camera:
         camera_handle = gym.create_camera_sensor(env, self.camera_props)
         # Add handle to camera_handles
         self.camera_handles.append(camera_handle)
+        # obtain camera tensor
+        cam_tensor = gym.get_camera_image_gpu_tensor(sim, env, self.camera_handles, gymapi.IMAGE_DEPTH)
+        # wrap camera tensor in a pytorch tensor
+        torch_cam_tensor = gymtorch.wrap_tensor(cam_tensor)
+        self.cam_tensors.append(torch_cam_tensor)
         # Get body handle from robot
         body_handle = gym.get_actor_rigid_body_handle(env, exo_handle, 7)
         # Attatch camera to body using handles
