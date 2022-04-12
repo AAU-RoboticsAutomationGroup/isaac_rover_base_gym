@@ -130,6 +130,7 @@ class Exomy_terrain(VecTask):
         tm_params.transform.p.y = -1.
         self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
         
+        
 
     def _create_envs(self,num_envs,spacing, num_per_row):
        # define plane on which environments are initialized
