@@ -41,4 +41,5 @@ isaacgym_task_map = {
     "Exomy_camera": Exomy_camera,
     "Exomy_heading": Exomy_heading,
     "Exomy_spawnPoints": Exomy_spawnPoints,
+    "Exomy_resets": Exomy_resets,
 }
