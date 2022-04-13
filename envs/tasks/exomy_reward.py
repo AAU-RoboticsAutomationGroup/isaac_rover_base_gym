@@ -386,7 +386,7 @@ class Exomy_reward(VecTask):
         actions_tensor[13::15]=(steering_angles[:,1])  #13 #FR POS
         actions_tensor[14::15]=(motor_velocities[:,1]) #14 #FR DRIVE
         #print(motor_velocities[:,0])
-
+        self.motor_velocities = motor_velocities
 
 
 
@@ -461,13 +461,13 @@ class Exomy_reward(VecTask):
 
         self.rew_buf[:], self.reset_buf[:] = compute_exomy_reward(self.root_positions,
             self.target_root_positions, self.root_quats, self.root_euler,
-            self.reset_buf, self.progress_buf, self.max_episode_length, self.dt)        
+            self.reset_buf, self.progress_buf, self.max_episode_length, self.dt, self.motor_velocities)        
 
 
 @torch.jit.script
 def compute_exomy_reward(root_positions, target_root_positions,
-        root_quats, root_euler, reset_buf, progress_buf, max_episode_length, dt):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, float) -> Tuple[Tensor, Tensor]
+        root_quats, root_euler, reset_buf, progress_buf, max_episode_length, dt, motor_velocities):
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, float, Tensor) -> Tuple[Tensor, Tensor]
     # distance to target
     #target_heading = torch.tensor(len(target_root_positions))
     target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
@@ -500,9 +500,16 @@ def compute_exomy_reward(root_positions, target_root_positions,
     #     print(root_positions[torch.argmax(heading_diff)])
     #     print(target_root_positions[torch.argmax(heading_diff)])
     
-    
 
-    reward = pos_reward - 0.1
+    # Kører fremad: reward = 0. Den kører baglaens: reward = -(velocity1 + velocity2) * 0.5
+    velocityML = motor_velocities[:,2]
+    velocityMR = motor_velocities[:,3]
+    velocityCondition = torch.where(((velocityML > 0) | (velocityMR > 0)), 0, 1)
+    vel_reward = ((velocityML + velocityMR) * velocityCondition) * 0.01
+
+
+
+    reward = pos_reward - 0.1 + vel_reward
     #print(reward)
     #print(reward[0:10])
     #print((torch.max(reward), torch.argmax(reward)))

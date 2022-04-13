@@ -226,7 +226,6 @@ class Exomy_heading(VecTask):
         marker_options.fix_base_link = True
         marker_asset = self.gym.create_sphere(self.sim, 0.1, marker_options)
 
-        self.cameras = camera()
 
         for i in range(num_envs):
             # Create environment
@@ -252,7 +251,6 @@ class Exomy_heading(VecTask):
             # Set DOF control properties
             self.gym.set_actor_dof_properties(env0, exomy0_handle, exomy_dof_props)
             #print(self.gym.get_actor_dof_properties((env0, exomy0_handle))
-            self.cameras.add_camera(env0, self.gym, exomy0_handle)
 
             # Spawn marker
             marker_handle = self.gym.create_actor(env0, marker_asset, default_pose, "marker", i, 1, 1)
@@ -380,7 +378,7 @@ class Exomy_heading(VecTask):
         actions_tensor[13::15]=(steering_angles[:,1])  #13 #FR POS
         actions_tensor[14::15]=(motor_velocities[:,1]) #14 #FR DRIVE
         #print(motor_velocities[:,0])
-
+        self.motor_velocities = motor_velocities
 
 
 
@@ -407,7 +405,9 @@ class Exomy_heading(VecTask):
         # actions_tensor[14] = speed
         # 
         self.gym.set_dof_velocity_target_tensor(self.sim, gymtorch.unwrap_tensor(actions_tensor)) #)
-        self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(actions_tensor)) #)
+        #print(actions_tensor[2::15])
+        #print(motor_velocities[:,2])
+        #self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(actions_tensor)) #)
         #forces = gymtorch.unwrap_tensor(actions_tensor)
         #self.gym.set_dof_actuation_force_tensor(self.sim, forces)
         
@@ -416,7 +416,6 @@ class Exomy_heading(VecTask):
         #    - e.g. compute reward, compute observations
         
         self.progress_buf += 1
-        self.cameras.render_cameras(self.gym, self.sim)
         #print(torch.max(self.progress_buf))
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
@@ -461,16 +460,18 @@ class Exomy_heading(VecTask):
 
         self.rew_buf[:], self.reset_buf[:] = compute_exomy_reward(self.root_positions,
             self.target_root_positions, self.root_quats, self.root_euler,
-            self.reset_buf, self.progress_buf, self.max_episode_length, self.location_tensor)        
+            self.reset_buf, self.progress_buf, self.max_episode_length, self.location_tensor, self.motor_velocities)        
 
 
 @torch.jit.script
 def compute_exomy_reward(root_positions, target_root_positions,
-        root_quats, root_euler, reset_buf, progress_buf, max_episode_length, location_tensor):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor) -> Tuple[Tensor, Tensor]
+        root_quats, root_euler, reset_buf, progress_buf, max_episode_length, location_tensor, motor_velocities):
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor, Tensor) -> Tuple[Tensor, Tensor]
+
     # distance to target
     #target_heading = torch.tensor(len(target_root_positions))
     target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
+    #print("target_dist", target_dist)
     target_vector = target_root_positions[..., 0:2] - root_positions[..., 0:2]
     #print(torch.max(heading_diff))
 
@@ -499,18 +500,17 @@ def compute_exomy_reward(root_positions, target_root_positions,
     #     print(root_euler[torch.argmax(heading_diff)])
     #     print(root_positions[torch.argmax(heading_diff)])
     #     print(target_root_positions[torch.argmax(heading_diff)])
-    """"
-    velocityFlag = 0
-    velocity = location_tensor[7]
+    
+    
+    # Kører fremad: reward = 0. Den kører baglaens: reward = -(velocity1 + velocity2) * 0.5
+    velocityML = motor_velocities[:,2]
+    velocityMR = motor_velocities[:,3]
+    velocityCondition = torch.where(((velocityML > 0) | (velocityMR > 0)), 0, 1)
+    vel_reward = ((velocityML + velocityMR) * velocityCondition) * 0.01
+    
 
-    if location_tensor[7] <= 0:
-         velocityFlag = 1
-    elif location_tensor[7] > 0:
-        velocityFlag = 0
-
-    front_forward_reward = velocityFlag * velocity * 0.5
-"""
-    reward = pos_reward - 0.1 #- front_forward_reward
+    # Reward function:
+    reward = pos_reward - 0.1 + vel_reward
     #print(reward)
     #print(reward[0:10])
     #print((torch.max(reward), torch.argmax(reward)))
