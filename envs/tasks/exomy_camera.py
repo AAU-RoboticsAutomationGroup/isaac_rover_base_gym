@@ -60,17 +60,10 @@ class Exomy_camera(VecTask):
         self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
         self.target_root_positions[:, 2] = 0
 
-        #print(self.target_root_positions)
-
         # Marker position
         self.marker_states = vec_root_tensor[:, 1, :]
         self.marker_positions = self.marker_states[:, 0:3]
 
-
-        # self.dof_states = vec_dof_tensor
-        # self.dof_positions = vec_dof_tensor[..., 0]
-        # self.dof_velocities = vec_dof_tensor[..., 1]
-        
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
         self.dof_states = gymtorch.wrap_tensor(dof_state_tensor)
         self.dof_positions = self.dof_states.view(self.num_envs, self.num_dof, 2)[..., 0]
@@ -115,11 +108,6 @@ class Exomy_camera(VecTask):
         self._create_envs(self.num_envs, self.cfg["env"]['envSpacing'], int(np.sqrt(self.num_envs)))
 
         
-
-
-
-
-
     def _create_exomy_asset(self):
         pass
 
@@ -133,12 +121,10 @@ class Exomy_camera(VecTask):
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
         # set target position randomly with x, y in (-2, 2) and z in (1, 2)
-        #print("ASDO:JNHSAOJPNHDJNO:HASDJUOIP")
         alpha = 2 * math.pi * torch.rand(num_sets, device=self.device)
         TargetRadius = 3
         TargetCordx = 0
         TargetCordy = 0
-        #print("Updating targets")
         x = TargetRadius * torch.cos(alpha) + TargetCordx
         y = TargetRadius * torch.sin(alpha) + TargetCordy
         self.target_root_positions[env_ids, 0] = x
@@ -146,7 +132,6 @@ class Exomy_camera(VecTask):
         self.target_root_positions[env_ids, 2] = 0
         self.marker_positions[env_ids] = self.target_root_positions[env_ids]
         # copter "position" is at the bottom of the legs, so shift the target up so it visually aligns better
-        #self.marker_positions[env_ids, 2] += 0.4
         actor_indices = self.all_actor_indices[env_ids, 1].flatten()
         self.gym.set_actor_root_state_tensor_indexed(self.sim,self.root_tensor, gymtorch.unwrap_tensor(actor_indices), num_sets)
 
@@ -160,14 +145,6 @@ class Exomy_camera(VecTask):
 
         asset_root = "../assets"
         exomy_asset_file = "urdf/exomy_modelv2/urdf/exomy_model.urdf"
-        
-        # if "asset" in self.cfg["env"]:
-        #     asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.cfg["env"]["asset"].get("assetRoot", asset_root))
-        #     asset_file = self.cfg["env"]["asset"].get("assetFileName", asset_file)
-
-        # asset_path = os.path.join(asset_root, asset_file)
-        # asset_root = os.path.dirname(asset_path)
-        # asset_file = os.path.basename(asset_path)
 
         asset_options = gymapi.AssetOptions()
         asset_options.fix_base_link = False
@@ -194,8 +171,6 @@ class Exomy_camera(VecTask):
         default_dof_state = np.zeros(exomy_num_dofs, gymapi.DofState.dtype)
         default_dof_state["pos"] = exomy_mids
 
-
-        
         exomy_dof_props["driveMode"] = [
             gymapi.DOF_MODE_VEL, #0  #L BOGIE
             gymapi.DOF_MODE_POS,  #1  #ML POS
@@ -254,13 +229,10 @@ class Exomy_camera(VecTask):
             
     
             # Configure DOF properties
-            # Set initial DOF states
-            # gym.set_actor_dof_states(env0, exomy0_handle, default_dof_state, gymapi.STATE_ALL)
+
             # Set DOF control properties
             self.gym.set_actor_dof_properties(env0, exomy0_handle, exomy_dof_props, self.sim)
-            #print(self.gym.get_actor_dof_properties((env0, exomy0_handle))
             self.cameras.add_camera(env0, self.gym, exomy0_handle)
-            # self.cameras.create_static_sphere(self.gym, self.sim, env0, exomy0_handle, i)
 
             # Spawn marker
             marker_handle = self.gym.create_actor(env0, marker_asset, default_pose, "marker", i, 1, 1)
@@ -274,7 +246,6 @@ class Exomy_camera(VecTask):
 
         target_actor_indices = self.set_targets(env_ids)
 
-
         # Set orientation of robot as random around Z
         r = []
         actor_indices = self.all_actor_indices[env_ids, 0].flatten()
@@ -283,24 +254,10 @@ class Exomy_camera(VecTask):
 
         RQuat = torch.cuda.FloatTensor(r)
 
-        #Rot = torch.rand(num_resets, 3, device=self.device) * 2 * math.pi
-        #Rot[..., 0] = 0
-        #Rot[..., 1] = math.pi
-        #Rot[..., 2] = math.pi
-        #print(Rot[0])
-        #print(Rot)
-        #QuatRot = tgm.angle_axis_to_quaternion(Rot)
-        
-        #print(RQuat)
-        
         self.root_states[env_ids] = self.initial_root_states[env_ids]
         self.root_states[env_ids, 0] = 0#torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
         self.root_states[env_ids, 1] = 0#torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
         self.root_states[env_ids, 2] = 0.2#torch_rand_float(-0.2, 1.5, (num_resets, 1), self.device).flatten()
-
-        #print(tgm.quaternion_to_angle_axis(self.root_states[0, 3:7]))
-        #print(self.root_states[0, 3:7])
-
 
         #Sets orientation
         self.root_states[env_ids, 3:7] = RQuat
@@ -323,60 +280,27 @@ class Exomy_camera(VecTask):
 
 
     def pre_physics_step(self, actions):
-        # 
-        #set_target_ids = (self.progress_buf % 1000 == 0).nonzero(as_tuple=False).squeeze(-1)
-       # if  torch.any(self.progress_buf % 1000 == 0):
-            #print(self.marker_positions)
+
         target_actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
-        #if len(set_target_ids) > 0:
-            #target_actor_indices = self.set_targets(set_target_ids)
     
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
-        #print(len(reset_env_ids))
-        #print(self.reset_buf)
+
         actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
-        #print(reset_env_ids.size())
+
         if len(reset_env_ids) > 0:
             actor_indices = self.reset_idx(reset_env_ids)
-
 
         reset_indices = torch.unique(torch.cat([target_actor_indices]))
         if len(reset_indices) > 0:
             self.gym.set_actor_root_state_tensor_indexed(self.sim, self.root_tensor, gymtorch.unwrap_tensor(reset_indices), len(reset_indices))
-        # if  (self.progress_buf % 500 == 0).nonzero(as_tuple=False).squeeze(-1):
-        #     print(self.marker_positions)
-        #print(self.marker_positions)
-        #print("exomy")
-        #print(self.target_root_positions)
+
         actions_tensor = torch.zeros(self.num_envs * self.num_dof, device=self.device, dtype=torch.float)
         _actions = actions.to(self.device)
 
-        # actions_tensor[::self.num_dof] = actions.to(self.device).squeeze()
-        # #print(np.shape(_actions))
-        #print(np.shape(_actions))
-        # print(actions.size())
-
-        #DRV_LF_joint_dof_handle = self.gym.find_actor_dof_handle(self.envs[0], self.exomy_handles[0], "DRV_LF_joint")
-        #max = 100
-        #max = 2
-        #actions_tensor = actions.to(self.device).squeeze() * 400
-        #pos, vel = self.Kinematics.Get_AckermannValues(1,1)
         _actions[:,0] = _actions[:,0] * 3
         _actions[:,1] = _actions[:,1] * 3
         steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
         
-        # actions_tensor[1::15]=(_actions[:,0]) * self.max_effort_pos  #1  #LF POS
-        # actions_tensor[2::15]=(_actions[:,1]) * self.max_effort_vel #2  #LF DRIVE
-        # actions_tensor[3::15]=(_actions[:,2]) * self.max_effort_pos #3  #LM POS
-        # actions_tensor[4::15]=(_actions[:,3]) * self.max_effort_vel #4  #LM DRIVE
-        # actions_tensor[6::15]=(_actions[:,4]) * self.max_effort_pos #6  #LR POS
-        # actions_tensor[7::15]=(_actions[:,5]) * self.max_effort_vel #7  #LR DRIVE
-        # actions_tensor[8::15]=(_actions[:,6]) * self.max_effort_pos #8  #RR POS
-        # actions_tensor[9::15]=(_actions[:,7]) * self.max_effort_vel #9  #RR DRIVE
-        # actions_tensor[11::15]=(_actions[:,8]) * self.max_effort_pos #11 #RF POS 
-        # actions_tensor[12::15]= (_actions[:,9]) * self.max_effort_vel #12 #RF DRIVE
-        # actions_tensor[13::15]=(_actions[:,10]) * self.max_effort_pos #13 #RM POS
-        # actions_tensor[14::15]=(_actions[:,11]) * self.max_effort_vel #14 #RM DRIVE
         actions_tensor[1::15]=(steering_angles[:,2])   #1  #ML POS
         actions_tensor[2::15]=(motor_velocities[:,2])  #2  #ML DRIVE
         actions_tensor[3::15]=(steering_angles[:,0])   #3   #FL POS
@@ -389,37 +313,10 @@ class Exomy_camera(VecTask):
         actions_tensor[12::15]= (motor_velocities[:,3])#12 #MR DRIVE
         actions_tensor[13::15]=(steering_angles[:,1])  #13 #FR POS
         actions_tensor[14::15]=(motor_velocities[:,1]) #14 #FR DRIVE
-        #print(motor_velocities[:,0])
 
-
-
-
-        # actions_tensor[1::15] = -math.pi/4 #1  #ML POS
-        # actions_tensor[2::15] = 0 #2  #ML DRIVE
-        # actions_tensor[3::15] = -math.pi/4 #3  #FL POS
-        # actions_tensor[4::15] = 0 #4  #FL DRIVE
-        # actions_tensor[6::15] = -math.pi/4 #6  #RL POS
-        # actions_tensor[7::15] = 0 #7  #RL DRIVE
-        # actions_tensor[8::15] = -math.pi/4 #8  #RR POS
-        # actions_tensor[9::15] = 0 #9  #RR DRIVE
-        # actions_tensor[11::15] = -math.pi/4 #11 #MR POS 
-        # actions_tensor[12::15] = 0 #12 #MR DRIVE
-        # actions_tensor[13::15] = -math.pi/4 #13 #FR POS
-        # actions_tensor[14::15] = 0 #14 #FR DRIVE
-        # speed =10
-        # actions_tensor[0] = 100 #BOTH REAR DRIVE        # actions_tensor[3] = 0
-        # actions_tensor[2] = speed 
-        # actions_tensor[4] = speed 
-        # actions_tensor[7] = speed 
-        # actions_tensor[9] = speed 
-        # actions_tensor[12] = speed
-        
-        # actions_tensor[14] = speed
-        # 
         self.gym.set_dof_velocity_target_tensor(self.sim, gymtorch.unwrap_tensor(actions_tensor)) #)
         self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(actions_tensor)) #)
-        #forces = gymtorch.unwrap_tensor(actions_tensor)
-        #self.gym.set_dof_actuation_force_tensor(self.sim, forces)
+
         
     def post_physics_step(self):
         # implement post-physics simulation code here
@@ -438,33 +335,19 @@ class Exomy_camera(VecTask):
         camera_visualization = "_cam.png" 
         self.visualization.show_image(self.envs[0], self.exomy_handles[0], self.gym, self.sim, camera_visualization, gymapi.IMAGE_COLOR)
         # color_image = self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_COLOR)
-    
 
-        #print(torch.max(self.progress_buf))
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
         root_quat = R.from_quat(self.root_quats.cpu())
         self.root_euler = torch.from_numpy(root_quat.as_euler('xyz')).to(self.device)
-        #self.root_euler = tgm.quaternion_to_angle_axis(self.root_quats)
-        time = torch.tensor(self.dt)
         
-        
-
-        #print(self.vec_root_tensor)
         self.compute_observations()
         self.compute_rewards()
 
     def compute_observations(self):
         self.obs_buf[..., 0:2] = (self.target_root_positions[..., 0:2] - self.root_positions[..., 0:2]) / 4
         self.obs_buf[..., 2] = (self.root_euler[..., 2]  - (math.pi/2)) + (math.pi / (2 * math.pi))
-        #self.obs_buf[..., 3:6] = self.root_linvels
-        #self.obs_buf[..., 6:9] = self.root_angvels
-        #print(self.obs_buf[0, 2:5])
-        #print(tgm.quaternion_to_angle_axis(self.root_quats)[0])
-        # self.obs_buf[..., 0:3] = (self.target_root_positions - self.root_positions) / 3
-        # self.obs_buf[..., 3:7] = self.root_quats
-        # self.obs_buf[..., 7:10] = self.root_linvels / 2
-        # self.obs_buf[..., 10:13] = self.root_angvels / math.pi
+
         return self.obs_buf
 
     def compute_rewards(self):
@@ -478,13 +361,13 @@ class Exomy_camera(VecTask):
 
         self.rew_buf[:], self.reset_buf[:] = compute_exomy_reward(self.root_positions,
             self.target_root_positions, self.root_quats, self.root_euler,
-            self.reset_buf, self.progress_buf, self.max_episode_length, self.dt)        
+            self.reset_buf, self.progress_buf, self.max_episode_length)        
 
 
 @torch.jit.script
 def compute_exomy_reward(root_positions, target_root_positions,
-        root_quats, root_euler, reset_buf, progress_buf, max_episode_length, dt):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, float) -> Tuple[Tensor, Tensor]
+        root_quats, root_euler, reset_buf, progress_buf, max_episode_length):
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float) -> Tuple[Tensor, Tensor]
     # distance to target
     #target_heading = torch.tensor(len(target_root_positions))
     target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
