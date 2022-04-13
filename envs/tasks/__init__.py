@@ -31,6 +31,7 @@ from tasks.exomy_terrain import Exomy_terrain
 from tasks.exomy_reward import Exomy_reward
 from tasks.exomy_camera import Exomy_camera
 from tasks.exomy_heading import Exomy_heading
+from tasks.exomy_spawnPoints import Exomy_spawnPoints
 
 # Mappings from strings to environments
 isaacgym_task_map = {
@@ -39,4 +40,5 @@ isaacgym_task_map = {
     "Exomy_reward": Exomy_reward,
     "Exomy_camera": Exomy_camera,
     "Exomy_heading": Exomy_heading,
+    "Exomy_spawnPoints": Exomy_spawnPoints,
 }
