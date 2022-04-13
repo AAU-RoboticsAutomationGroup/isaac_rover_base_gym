@@ -170,24 +170,13 @@ class Exomy(VecTask):
 
 
         heightfield[0:num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
-        heightfield[num_rows:2*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.1, max_height=0.1, step=0.2, downsampled_scale=0.5).height_field_raw
-        heightfield[2*num_rows:3*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.15, max_height=0.15, step=0.2, downsampled_scale=0.5).height_field_raw
+        heightfield[num_rows:2*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.1, max_height=0.1, step=0.1, downsampled_scale=0.5).height_field_raw
+        heightfield[2*num_rows:3*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.15, max_height=0.15, step=0.15, downsampled_scale=0.5).height_field_raw
         heightfield[3*num_rows:4*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.2, max_height=0.2, step=0.2, downsampled_scale=0.5).height_field_raw
-        heightfield[4*num_rows:5*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.25, max_height=0.25, step=0.2, downsampled_scale=0.5).height_field_raw
-        heightfield[5*num_rows:6*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.3, max_height=0.3, step=0.2, downsampled_scale=0.5).height_field_raw
-        heightfield[6*num_rows:7*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.35, max_height=0.35, step=0.2, downsampled_scale=0.5).height_field_raw
-        heightfield[7*num_rows:8*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.4, max_height=0.4, step=0.2, downsampled_scale=0.5).height_field_raw
-        #####################################################################
-        #heightfield[0:num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.2, max_height=0.2, step=0.2, downsampled_scale=0.5).height_field_raw
-        #heightfield[num_rows:2*num_rows, :] = sloped_terrain(new_sub_terrain(), slope=-0.5).height_field_raw
-        #heightfield[2*num_rows:3*num_rows, :] = pyramid_sloped_terrain(new_sub_terrain(), slope=-0.5).height_field_raw
-        #heightfield[3*num_rows:4*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=5., num_rects=20).height_field_raw
-        #heightfield[4*num_rows:5*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=2., amplitude=1.).height_field_raw
-        #heightfield[5*num_rows:6*num_rows, :] = stairs_terrain(new_sub_terrain(), step_width=0.75, step_height=-0.5).height_field_raw
-        #heightfield[6*num_rows:7*num_rows, :] = pyramid_stairs_terrain(new_sub_terrain(), step_width=0.75, step_height=-0.5).height_field_raw
-        #heightfield[7*num_rows:8*num_rows, :] = stepping_stones_terrain(new_sub_terrain(), stone_size=1.,
-        #                                                        stone_distance=1., max_height=0.5, platform_size=0.).height_field_raw
-        #####################################################################
+        heightfield[4*num_rows:5*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.25, max_height=0.25, step=0.25, downsampled_scale=0.5).height_field_raw
+        heightfield[5*num_rows:6*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.3, max_height=0.3, step=0.3, downsampled_scale=0.5).height_field_raw
+        heightfield[6*num_rows:7*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.35, max_height=0.35, step=0.35, downsampled_scale=0.5).height_field_raw
+        heightfield[7*num_rows:8*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.4, max_height=0.4, step=0.4, downsampled_scale=0.5).height_field_raw
 
         # add the terrain as a triangle mesh
         vertices, triangles = convert_heightfield_to_trimesh(heightfield, horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=3.5)
