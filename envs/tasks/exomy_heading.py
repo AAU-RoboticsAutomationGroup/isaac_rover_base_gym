@@ -11,7 +11,7 @@ from tasks.base.vec_task import VecTask
 import torchgeometry as tgm
 from isaacgym import gymutil, gymtorch, gymapi
 from scipy.spatial.transform import Rotation as R
-from utils.kinematics import Ackermann
+from utils.kinematicsUpdated import Ackermann
 from tasks.camera import camera
 
 
@@ -350,21 +350,11 @@ class Exomy_heading(VecTask):
         #max = 2
         #actions_tensor = actions.to(self.device).squeeze() * 400
         #pos, vel = self.Kinematics.Get_AckermannValues(1,1)
-        _actions[:,0] = _actions[:,0] * 3
-        _actions[:,1] = _actions[:,1] * 3
+        _actions[:,0] = _actions[:,0] * 30
+        _actions[:,1] = _actions[:,1] * 30
+        
         steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
-        # actions_tensor[1::15]=(_actions[:,0]) * self.max_effort_pos  #1  #LF POS
-        # actions_tensor[2::15]=(_actions[:,1]) * self.max_effort_vel #2  #LF DRIVE
-        # actions_tensor[3::15]=(_actions[:,2]) * self.max_effort_pos #3  #LM POS
-        # actions_tensor[4::15]=(_actions[:,3]) * self.max_effort_vel #4  #LM DRIVE
-        # actions_tensor[6::15]=(_actions[:,4]) * self.max_effort_pos #6  #LR POS
-        # actions_tensor[7::15]=(_actions[:,5]) * self.max_effort_vel #7  #LR DRIVE
-        # actions_tensor[8::15]=(_actions[:,6]) * self.max_effort_pos #8  #RR POS
-        # actions_tensor[9::15]=(_actions[:,7]) * self.max_effort_vel #9  #RR DRIVE
-        # actions_tensor[11::15]=(_actions[:,8]) * self.max_effort_pos #11 #RF POS 
-        # actions_tensor[12::15]= (_actions[:,9]) * self.max_effort_vel #12 #RF DRIVE
-        # actions_tensor[13::15]=(_actions[:,10]) * self.max_effort_pos #13 #RM POS
-        # actions_tensor[14::15]=(_actions[:,11]) * self.max_effort_vel #14 #RM DRIVE
+        
         actions_tensor[1::15]=(steering_angles[:,2])   #1  #ML POS
         actions_tensor[2::15]=(motor_velocities[:,2])  #2  #ML DRIVE
         actions_tensor[3::15]=(steering_angles[:,0])   #3   #FL POS
@@ -379,30 +369,7 @@ class Exomy_heading(VecTask):
         actions_tensor[14::15]=(motor_velocities[:,1]) #14 #FR DRIVE
         #print(motor_velocities[:,0])
         self.motor_velocities = motor_velocities
-
-
-
-        # actions_tensor[1::15] = -math.pi/4 #1  #ML POS
-        # actions_tensor[2::15] = 0 #2  #ML DRIVE
-        # actions_tensor[3::15] = -math.pi/4 #3  #FL POS
-        # actions_tensor[4::15] = 0 #4  #FL DRIVE
-        # actions_tensor[6::15] = -math.pi/4 #6  #RL POS
-        # actions_tensor[7::15] = 0 #7  #RL DRIVE
-        # actions_tensor[8::15] = -math.pi/4 #8  #RR POS
-        # actions_tensor[9::15] = 0 #9  #RR DRIVE
-        # actions_tensor[11::15] = -math.pi/4 #11 #MR POS 
-        # actions_tensor[12::15] = 0 #12 #MR DRIVE
-        # actions_tensor[13::15] = -math.pi/4 #13 #FR POS
-        # actions_tensor[14::15] = 0 #14 #FR DRIVE
-        # speed =10
-        # actions_tensor[0] = 100 #BOTH REAR DRIVE        # actions_tensor[3] = 0
-        # actions_tensor[2] = speed 
-        # actions_tensor[4] = speed 
-        # actions_tensor[7] = speed 
-        # actions_tensor[9] = speed 
-        # actions_tensor[12] = speed
         
-        # actions_tensor[14] = speed
         # 
         self.gym.set_dof_velocity_target_tensor(self.sim, gymtorch.unwrap_tensor(actions_tensor)) #)
         #print(actions_tensor[2::15])
