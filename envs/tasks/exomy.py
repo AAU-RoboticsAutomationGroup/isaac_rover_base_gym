@@ -193,12 +193,13 @@ class Exomy(VecTask):
         num_sets = len(env_ids)
         # set target position randomly with x, y in (-2, 2) and z in (1, 2)
         #print("ASDO:JNHSAOJPNHDJNO:HASDJUOIP")
-        alpha = 2 * math.pi * torch.rand(num_sets, device=self.device)
-        TargetRadius = 3
+        alpha = math.pi * torch.rand(num_sets, device=self.device) - 90
+        TargetRadius = 2
         TargetCordx = 0
         TargetCordy = 0
+        RobotCordx = self.root_positions[env_ids,1]
         #print("Updating targets")
-        x = TargetRadius * torch.cos(alpha) + TargetCordx
+        x = TargetRadius * torch.cos(alpha) + TargetCordx + RobotCordx
         y = TargetRadius * torch.sin(alpha) + TargetCordy
         self.target_root_positions[env_ids, 0] = x
         self.target_root_positions[env_ids, 1] = y
