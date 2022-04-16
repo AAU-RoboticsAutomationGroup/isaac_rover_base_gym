@@ -1,7 +1,9 @@
 
 import math
+from hypothesis import target
 import numpy as np
 import os
+from requests import head
 import torch
 import xml.etree.ElementTree as ET
 import random
@@ -258,7 +260,6 @@ class Exomy_heading(VecTask):
 
     def reset_idx(self, env_ids):
         # set rotor speeds
-        
         num_resets = len(env_ids)
 
         target_actor_indices = self.set_targets(env_ids)
@@ -327,7 +328,17 @@ class Exomy_heading(VecTask):
         #print(reset_env_ids.size())
         if len(reset_env_ids) > 0:
             actor_indices = self.reset_idx(reset_env_ids)
+            #print("reset env")
 
+        # Set new targets when an agent reaches current target
+        target_dist = torch.sqrt(torch.square(self.target_root_positions - self.root_positions).sum(-1))
+        reset_targets = torch.where(target_dist < 0.5, 1, 0) 
+        reset_targets_ids = reset_targets.nonzero(as_tuple=False).squeeze(-1)
+        if len(reset_env_ids) > 0:
+            target_actor_indices = self.set_targets(reset_targets_ids)
+            #target_dist = torch.sqrt(torch.square(self.target_root_positions - self.root_positions).sum(-1))
+            #print(target_dist)
+            #print("update targets")
 
         reset_indices = torch.unique(torch.cat([target_actor_indices]))
         if len(reset_indices) > 0:
@@ -447,6 +458,7 @@ def compute_exomy_reward(root_positions, target_root_positions,
     dot =  ((target_vector[..., 0] * torch.cos(root_euler[..., 2] - (math.pi/2))) + (target_vector[..., 1] * torch.sin(root_euler[..., 2] - (math.pi/2)))) / ((torch.sqrt(torch.square(target_vector[..., 0]) + torch.square(target_vector[..., 1]))) * torch.sqrt(torch.square(torch.cos(root_euler[..., 2] - (math.pi/2))) + torch.square(torch.sin(root_euler[..., 2] - (math.pi/2)))))
     angle = torch.clamp(dot, min = (-1 + eps), max = (1 - eps))
     heading_diff = torch.arccos(angle)
+    heading_reward = heading_diff * 0.05
     #print(torch.rad2deg(dot))
     #print(root_euler)
     #print(torch.rad2deg(heading_diff))
@@ -459,6 +471,7 @@ def compute_exomy_reward(root_positions, target_root_positions,
 
     
     pos_reward = 1.0 / (1.0 + target_dist * target_dist)
+    goal_reward = torch.where(target_dist < 0.5, 1, 0)
     #pos_reward = 1.0 / (1.0 + target_dist * target_dist + (0.0001 * progress_buf) + (0.5 * heading_diff))
     # if math.isnan(torch.min(heading_diff)):
     #     print(dot[torch.argmax(heading_diff)])
@@ -477,7 +490,7 @@ def compute_exomy_reward(root_positions, target_root_positions,
     
 
     # Reward function:
-    reward = pos_reward - 0.1 + vel_reward
+    reward = pos_reward - 0.1 + vel_reward + goal_reward - heading_reward
     #print(reward)
     #print(reward[0:10])
     #print((torch.max(reward), torch.argmax(reward)))
