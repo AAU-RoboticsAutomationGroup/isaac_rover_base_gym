@@ -23,6 +23,8 @@ from isaacgym.terrain_utils import *
     # Vel_reward
 # Exomy_terrain - 11/04 kl. 10:35
     # 1 uniform terrain instead of 8 different
+# Exomy_heading - 17/04 kl. 23
+    # Spawn new points
 
 
 class Exomy(VecTask):
@@ -197,9 +199,9 @@ class Exomy(VecTask):
         TargetRadius = 2
         TargetCordx = 0
         TargetCordy = 0
-        RobotCordx = self.root_positions[env_ids,1]
+        RobotCordx = self.root_positions[env_ids,0]
         #print("Updating targets")
-        x = TargetRadius * torch.cos(alpha) + TargetCordx + RobotCordx
+        x = TargetRadius * torch.cos(alpha) + TargetCordx + abs(RobotCordx)
         y = TargetRadius * torch.sin(alpha) + TargetCordy
         self.target_root_positions[env_ids, 0] = x
         self.target_root_positions[env_ids, 1] = y
@@ -398,6 +400,12 @@ class Exomy(VecTask):
         if len(reset_env_ids) > 0:
             actor_indices = self.reset_idx(reset_env_ids)
 
+        # Set new targets when an agent reaches current target
+        target_dist = torch.sqrt(torch.square(self.target_root_positions - self.root_positions).sum(-1))
+        reset_targets = torch.where(target_dist < 0.5, 1, 0) 
+        reset_targets_ids = reset_targets.nonzero(as_tuple=False).squeeze(-1)
+        if len(reset_env_ids) > 0:
+            target_actor_indices = self.set_targets(reset_targets_ids)
 
         reset_indices = torch.unique(torch.cat([target_actor_indices]))
         if len(reset_indices) > 0:
