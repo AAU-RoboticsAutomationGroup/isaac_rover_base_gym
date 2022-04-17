@@ -129,12 +129,13 @@ class Exomy_heading(VecTask):
         num_sets = len(env_ids)
         # set target position randomly with x, y in (-2, 2) and z in (1, 2)
         #print("ASDO:JNHSAOJPNHDJNO:HASDJUOIP")
-        alpha = 2 * math.pi * torch.rand(num_sets, device=self.device)
-        TargetRadius = 3
+        alpha = math.pi * torch.rand(num_sets, device=self.device) - 90
+        TargetRadius = 2
         TargetCordx = 0
         TargetCordy = 0
+        RobotCordx = self.root_positions[env_ids,0]
         #print("Updating targets")
-        x = TargetRadius * torch.cos(alpha) + TargetCordx
+        x = TargetRadius * torch.cos(alpha) + TargetCordx + abs(RobotCordx)
         y = TargetRadius * torch.sin(alpha) + TargetCordy
         self.target_root_positions[env_ids, 0] = x
         self.target_root_positions[env_ids, 1] = y
@@ -150,8 +151,8 @@ class Exomy_heading(VecTask):
 
     def _create_envs(self,num_envs,spacing, num_per_row):
        # define plane on which environments are initialized
-        lower = gymapi.Vec3(0.5 * -spacing, -spacing, 0.0)
-        upper = gymapi.Vec3(0.5 * spacing, spacing, spacing)
+        lower = gymapi.Vec3(0.01 * -spacing, -spacing, 0.0)
+        upper = gymapi.Vec3(0.01 * spacing, spacing, spacing)
 
         asset_root = "../assets"
         exomy_asset_file = "urdf/exomy_modelv2/urdf/exomy_model.urdf"
@@ -262,7 +263,7 @@ class Exomy_heading(VecTask):
         # set rotor speeds
         num_resets = len(env_ids)
 
-        target_actor_indices = self.set_targets(env_ids)
+        #target_actor_indices = self.set_targets(env_ids)
 
 
         # Set orientation of robot as random around Z
@@ -287,6 +288,8 @@ class Exomy_heading(VecTask):
         self.root_states[env_ids, 0] = 0#torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
         self.root_states[env_ids, 1] = 0#torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
         self.root_states[env_ids, 2] = 0.2#torch_rand_float(-0.2, 1.5, (num_resets, 1), self.device).flatten()
+
+        target_actor_indices = self.set_targets(env_ids) # Set targets here (after setting rover position) in order to start from initial position
 
         #print(tgm.quaternion_to_angle_axis(self.root_states[0, 3:7]))
         #print(self.root_states[0, 3:7])
@@ -471,7 +474,6 @@ def compute_exomy_reward(root_positions, target_root_positions,
 
     
     pos_reward = 1.0 / (1.0 + target_dist * target_dist)
-    goal_reward = torch.where(target_dist < 0.5, 1, 0)
     #pos_reward = 1.0 / (1.0 + target_dist * target_dist + (0.0001 * progress_buf) + (0.5 * heading_diff))
     # if math.isnan(torch.min(heading_diff)):
     #     print(dot[torch.argmax(heading_diff)])
@@ -487,10 +489,15 @@ def compute_exomy_reward(root_positions, target_root_positions,
     velocityMR = motor_velocities[:,3]
     velocityCondition = torch.where(((velocityML > 0) | (velocityMR > 0)), 0, 1)
     vel_reward = ((velocityML + velocityMR) * velocityCondition) * 0.01
+
+    # Goal reward for at komme indenfor xx meter af current target
+    goal_reward = torch.where(target_dist < 0.5, 1, 0) * 2
     
+    # Penalty for moving too far away from target
+    distance_penalty = torch.where(target_dist > 3.5, 1, 0) * 2
 
     # Reward function:
-    reward = pos_reward - 0.1 + vel_reward + goal_reward - heading_reward
+    reward = pos_reward - 0.1 + vel_reward + goal_reward - heading_reward - distance_penalty
     #print(reward)
     #print(reward[0:10])
     #print((torch.max(reward), torch.argmax(reward)))
