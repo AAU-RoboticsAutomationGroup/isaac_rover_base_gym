@@ -337,8 +337,9 @@ class Exomy_heading(VecTask):
         target_dist = torch.sqrt(torch.square(self.target_root_positions - self.root_positions).sum(-1))
         reset_targets = torch.where(target_dist < 0.5, 1, 0) 
         reset_targets_ids = reset_targets.nonzero(as_tuple=False).squeeze(-1)
-        if len(reset_env_ids) > 0:
+        if len(reset_targets_ids) > 0:
             target_actor_indices = self.set_targets(reset_targets_ids)
+            self.progress_buf[reset_targets_ids] = 0
             #target_dist = torch.sqrt(torch.square(self.target_root_positions - self.root_positions).sum(-1))
             #print(target_dist)
             #print("update targets")
@@ -472,32 +473,42 @@ def compute_exomy_reward(root_positions, target_root_positions,
     #print(torch.rad2deg(root_euler[..., 2]))
 
 
-    
+    # position reward
     pos_reward = 1.0 / (1.0 + target_dist * target_dist)
-    #pos_reward = 1.0 / (1.0 + target_dist * target_dist + (0.0001 * progress_buf) + (0.5 * heading_diff))
-    # if math.isnan(torch.min(heading_diff)):
-    #     print(dot[torch.argmax(heading_diff)])
-    #     print(heading_diff[torch.argmax(heading_diff)])
-    #     print(target_vector[torch.argmax(heading_diff)])
-    #     print(root_euler[torch.argmax(heading_diff)])
-    #     print(root_positions[torch.argmax(heading_diff)])
-    #     print(target_root_positions[torch.argmax(heading_diff)])
+        #pos_reward = 1.0 / (1.0 + target_dist * target_dist + (0.0001 * progress_buf) + (0.5 * heading_diff))
+        # if math.isnan(torch.min(heading_diff)):
+        #     print(dot[torch.argmax(heading_diff)])
+        #     print(heading_diff[torch.argmax(heading_diff)])
+        #     print(target_vector[torch.argmax(heading_diff)])
+        #     print(root_euler[torch.argmax(heading_diff)])
+        #     print(root_positions[torch.argmax(heading_diff)])
+        #     print(target_root_positions[torch.argmax(heading_diff)])
     
     
-    # Kører fremad: reward = 0. Den kører baglaens: reward = -(velocity1 + velocity2) * 0.5
+    # Reversing penalty: Den kører baglaens: reward = -(velocity1 + velocity2) * 0.5
     velocityML = motor_velocities[:,2]
     velocityMR = motor_velocities[:,3]
     velocityCondition = torch.where(((velocityML > 0) | (velocityMR > 0)), 0, 1)
-    vel_reward = ((velocityML + velocityMR) * velocityCondition) * 0.01
+    vel_penalty = ((velocityML + velocityMR) * velocityCondition) * 0.01
 
     # Goal reward for at komme indenfor xx meter af current target
     goal_reward = torch.where(target_dist < 0.5, 1, 0) * 2
     
     # Penalty for moving too far away from target
-    distance_penalty = torch.where(target_dist > 3.5, 1, 0) * 2
+    distanceReset_penalty = torch.where(target_dist > 4, 1, 0) * 2
+
+    # Penalty for tilting
+    penaltyAngle = 0.35 #radians
+    tiltFlag = torch.where((root_euler[:,0] > penaltyAngle) | (root_euler[:,1] > penaltyAngle), 1, 0)
+    tiltX = torch.where((tiltFlag == 1) & (root_euler[:,0] > root_euler[:,1]), 1, 0)
+    tiltY = torch.where((tiltFlag == 1) & (root_euler[:,0] < root_euler[:,1]), 1, 0)
+    tilt_penalty = tiltX * root_euler[:,0] * root_euler[:,0] + tiltY * root_euler[:,1] * root_euler[:,1] 
+
+    # Penalty for not reaching target within max_episode_length
+    time_penalty = torch.where(progress_buf >= max_episode_length - 1, 1, 0)
 
     # Reward function:
-    reward = pos_reward - 0.1 + vel_reward + goal_reward - heading_reward - distance_penalty
+    reward = pos_reward - 0.1 + vel_penalty + goal_reward - heading_reward - distanceReset_penalty - tilt_penalty - time_penalty
     #print(reward)
     #print(reward[0:10])
     #print((torch.max(reward), torch.argmax(reward)))
