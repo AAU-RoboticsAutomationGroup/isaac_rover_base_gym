@@ -14,11 +14,11 @@ class camera:
         self.camera_props.height = 240    #Pixels height
         self.camera_props.near_plane = 0.16
         self.camera_props.far_plane = 3
-        self.camera_props.enable_tensor = True
+        self.camera_props.enable_tensors = True
         #Placement of camera
         self.local_transform = gymapi.Transform()
         self.local_transform.p = gymapi.Vec3(0,0,0.01) #Units in meters, (X, Y, Z) - X-up/down, Y-Side, Z-forwards/backwards
-        self.local_transform.r = gymapi.Quat.from_euler_zyx(np.radians(180.0), np.radians(-119.0), np.radians(0.0))
+        self.local_transform.r = gymapi.Quat.from_euler_zyx(np.radians(-90),np.radians(-90),np.radians(0))
         self.camera_handles = []
         self.cam_tensors = []
         print("Camera class initialized!")
@@ -33,12 +33,13 @@ class camera:
         # Add handle to camera_handles
         self.camera_handles.append(camera_handle)
         # obtain camera tensor
-        cam_tensor = gym.get_camera_image_gpu_tensor(sim, env, self.camera_handles, gymapi.IMAGE_DEPTH)
+        cam_tensor = gym.get_camera_image_gpu_tensor(sim, env, camera_handle, gymapi.IMAGE_DEPTH)
         # wrap camera tensor in a pytorch tensor
         torch_cam_tensor = gymtorch.wrap_tensor(cam_tensor)
         self.cam_tensors.append(torch_cam_tensor)
         # Get body handle from robot
-        body_handle = gym.get_actor_rigid_body_handle(env, exo_handle, 7)
+        body = gym.find_actor_rigid_body_handle(env, exo_handle, "3D_Cam")
+        body_handle = gym.get_actor_rigid_body_handle(env, exo_handle, body)
         # Attatch camera to body using handles
         gym.attach_camera_to_body(camera_handle, env, body_handle, self.local_transform, gymapi.FOLLOW_TRANSFORM)
 

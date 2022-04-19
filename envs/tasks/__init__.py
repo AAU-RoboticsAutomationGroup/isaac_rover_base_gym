@@ -32,6 +32,7 @@ from tasks.exomy_reward import Exomy_reward
 from tasks.exomy_camera import Exomy_camera
 from tasks.exomy_heading import Exomy_heading
 from tasks.exomy_spawnPoints import Exomy_spawnPoints
+from tasks.exomy_resets import Exomy_resets
 
 # Mappings from strings to environments
 isaacgym_task_map = {

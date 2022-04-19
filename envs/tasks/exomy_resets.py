@@ -19,7 +19,6 @@ from tasks.visualize import visualize
 
 
 class Exomy_resets(VecTask):
-
     def __init__(self, cfg, sim_device, graphics_device_id, headless):
 
         self.cfg = cfg

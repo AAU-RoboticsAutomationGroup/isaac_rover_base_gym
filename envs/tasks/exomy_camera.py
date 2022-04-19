@@ -231,8 +231,8 @@ class Exomy_camera(VecTask):
             # Configure DOF properties
 
             # Set DOF control properties
-            self.gym.set_actor_dof_properties(env0, exomy0_handle, exomy_dof_props, self.sim)
-            self.cameras.add_camera(env0, self.gym, exomy0_handle)
+            self.gym.set_actor_dof_properties(env0, exomy0_handle, exomy_dof_props)
+            self.cameras.add_camera(env0, self.gym, exomy0_handle, self.sim)
 
             # Spawn marker
             marker_handle = self.gym.create_actor(env0, marker_asset, default_pose, "marker", i, 1, 1)
@@ -327,13 +327,14 @@ class Exomy_camera(VecTask):
         self.cameras.render_cameras(self.gym, self.sim)
 
         
-        # self.gym.start_access_image_tensors(self.sim)
-        ## i thinks have to go in here
-        # self.gym.end_access_image_tensors(self.sim)   
+        self.gym.start_access_image_tensors(self.sim)
+        # i thinks have to go in here
+        self.gym.end_access_image_tensors(self.sim)   
 
         self.visualization = visualize()
         camera_visualization = "_cam.png" 
         self.visualization.show_image(self.envs[0], self.exomy_handles[0], self.gym, self.sim, camera_visualization, gymapi.IMAGE_COLOR)
+
         # color_image = self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_COLOR)
 
         self.gym.refresh_actor_root_state_tensor(self.sim)
