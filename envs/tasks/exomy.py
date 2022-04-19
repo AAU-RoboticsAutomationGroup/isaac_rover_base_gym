@@ -187,8 +187,8 @@ class Exomy(VecTask):
         tm_params = gymapi.TriangleMeshParams()
         tm_params.nb_vertices = vertices.shape[0]
         tm_params.nb_triangles = triangles.shape[0]
-        tm_params.transform.p.x = -1.
-        tm_params.transform.p.y = -1.
+        tm_params.transform.p.x = -4.
+        tm_params.transform.p.y = -8.
         self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
 
     def set_targets(self, env_ids):
@@ -205,7 +205,7 @@ class Exomy(VecTask):
         y = TargetRadius * torch.sin(alpha) + TargetCordy
         self.target_root_positions[env_ids, 0] = x
         self.target_root_positions[env_ids, 1] = y
-        self.target_root_positions[env_ids, 2] = 0
+        self.target_root_positions[env_ids, 2] = 0.5
         self.marker_positions[env_ids] = self.target_root_positions[env_ids]
         # copter "position" is at the bottom of the legs, so shift the target up so it visually aligns better
         #self.marker_positions[env_ids, 2] += 0.4
@@ -218,7 +218,7 @@ class Exomy(VecTask):
     def _create_envs(self,num_envs,spacing, num_per_row):
        # define plane on which environments are initialized
         lower = gymapi.Vec3(0.01*-spacing, -spacing, 0.0)
-        upper = gymapi.Vec3(0.01 * spacing, spacing, spacing)
+        upper = gymapi.Vec3(0.01 * spacing, spacing, 10*spacing)
 
         asset_root = "../assets"
         exomy_asset_file = "urdf/exomy_modelv2/urdf/exomy_model.urdf"
@@ -401,8 +401,8 @@ class Exomy(VecTask):
             actor_indices = self.reset_idx(reset_env_ids)
 
         # Set new targets when an agent reaches current target
-        target_dist = torch.sqrt(torch.square(self.target_root_positions - self.root_positions).sum(-1))
-        reset_targets = torch.where(target_dist < 0.5, 1, 0) 
+        target_dist = torch.sqrt(torch.square(self.target_root_positions[:,0:2] - self.root_positions[:,0:2]).sum(-1))
+        reset_targets = torch.where(target_dist < 0.2, 1, 0) 
         reset_targets_ids = reset_targets.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_env_ids) > 0:
             target_actor_indices = self.set_targets(reset_targets_ids)
@@ -504,46 +504,49 @@ class Exomy(VecTask):
 def compute_exomy_reward(root_positions, target_root_positions,
         root_quats, root_euler, reset_buf, progress_buf, max_episode_length, dt, motor_velocities):
     # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, float, Tensor) -> Tuple[Tensor, Tensor]
+
     # distance to target
     #target_heading = torch.tensor(len(target_root_positions))
-    target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
+    target_dist = torch.sqrt(torch.square(target_root_positions[:,0:2] - root_positions[:,0:2]).sum(-1))
+    #print("target_dist", target_dist)
     target_vector = target_root_positions[..., 0:2] - root_positions[..., 0:2]
     #print(torch.max(heading_diff))
 
+    # Heading penalty. Penalty for pointing away from target. Penalty increases with target_dist (heading close to target is not as relevant)
     eps = 1e-7
-
     dot =  ((target_vector[..., 0] * torch.cos(root_euler[..., 2] - (math.pi/2))) + (target_vector[..., 1] * torch.sin(root_euler[..., 2] - (math.pi/2)))) / ((torch.sqrt(torch.square(target_vector[..., 0]) + torch.square(target_vector[..., 1]))) * torch.sqrt(torch.square(torch.cos(root_euler[..., 2] - (math.pi/2))) + torch.square(torch.sin(root_euler[..., 2] - (math.pi/2)))))
     angle = torch.clamp(dot, min = (-1 + eps), max = (1 - eps))
     heading_diff = torch.arccos(angle)
-    #print(torch.rad2deg(dot))
-    #print(root_euler)
-    #print(torch.rad2deg(heading_diff))
-    # print(torch.min(heading_diff))
-    #print(torch.min(heading_diff))
-    # print(root_euler[torch.argmax(heading_diff)])
-    # print(target_vector[torch.argmax(heading_diff)])
-    #print(torch.rad2deg(root_euler[..., 2]))
+    heading_penalty = heading_diff * heading_diff * target_dist * 0.01
 
-
-    
+    # position reward
     pos_reward = 1.0 / (1.0 + target_dist * target_dist)
-    #pos_reward = 1.0 / (1.0 + target_dist * target_dist + (0.0001 * progress_buf) + (0.5 * heading_diff))
-    # if math.isnan(torch.min(heading_diff)):
-    #     print(dot[torch.argmax(heading_diff)])
-    #     print(heading_diff[torch.argmax(heading_diff)])
-    #     print(target_vector[torch.argmax(heading_diff)])
-    #     print(root_euler[torch.argmax(heading_diff)])
-    #     print(root_positions[torch.argmax(heading_diff)])
-    #     print(target_root_positions[torch.argmax(heading_diff)])
     
-    # Kører fremad: reward = 0. Den kører baglaens: reward = -(velocity1 + velocity2) * 0.5
+    # Reversing penalty: Den kører baglaens: reward = -(velocity1 + velocity2) * 0.5
     velocityML = motor_velocities[:,2]
     velocityMR = motor_velocities[:,3]
     velocityCondition = torch.where(((velocityML > 0) | (velocityMR > 0)), 0, 1)
-    vel_reward = ((velocityML + velocityMR) * velocityCondition) * 0.01
+    vel_penalty = ((velocityML + velocityMR) * velocityCondition) * 0.01
+
+    # Goal reward for at komme indenfor xx meter af current target
+    goal_reward = torch.where(target_dist < 0.2, 1, 0) * 0.1
+    
+    # Penalty for moving too far away from target
+    distanceReset_penalty = torch.where(target_dist > 4, 1, 0) * 0.1
+
+    # Penalty for tilting
+    penaltyAngle = 0.35 #radians
+    tiltFlag = torch.where((root_euler[:,0] > penaltyAngle) | (root_euler[:,1] > penaltyAngle), 1, 0)
+    tiltX = torch.where((tiltFlag == 1) & (root_euler[:,0] > root_euler[:,1]), 1, 0)
+    tiltY = torch.where((tiltFlag == 1) & (root_euler[:,0] < root_euler[:,1]), 1, 0)
+    tilt_penalty = tiltX * root_euler[:,0] * root_euler[:,0] + tiltY * root_euler[:,1] * root_euler[:,1]
 
 
-    reward = pos_reward - 0.1 + vel_reward
+    # Penalty for not reaching target within max_episode_length
+    time_penalty = torch.where(progress_buf >= max_episode_length - 1, 1, 0)
+
+    # Reward function:
+    reward = pos_reward + vel_penalty + goal_reward - heading_penalty - distanceReset_penalty - tilt_penalty - time_penalty - 0.01
     #print(reward)
     #print(reward[0:10])
     #print((torch.max(reward), torch.argmax(reward)))
