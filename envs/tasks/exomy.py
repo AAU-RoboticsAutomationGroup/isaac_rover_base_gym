@@ -34,7 +34,7 @@ class Exomy(VecTask):
         self.cfg = cfg
         #self.Kinematics = Rover()
         self.max_episode_length = self.cfg["env"]["maxEpisodeLength"]
-        self.cfg["env"]["numObservations"] = 3
+        self.cfg["env"]["numObservations"] = 10
         self.cfg["env"]["numActions"] = 2
         self.max_effort_vel = 5.2
         self.max_effort_pos = math.pi/2
@@ -162,7 +162,7 @@ class Exomy(VecTask):
         """
         num_terains = 8
         terrain_width = 5.
-        terrain_length = 128.
+        terrain_length = 200.
         horizontal_scale = 0.25  # [m]
         vertical_scale = 0.005  # [m]
         num_rows = int(terrain_width/horizontal_scale)
@@ -174,13 +174,13 @@ class Exomy(VecTask):
 
 
         heightfield[0:num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
-        heightfield[num_rows:2*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.1, max_height=0.1, step=0.1, downsampled_scale=0.5).height_field_raw
-        heightfield[2*num_rows:3*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.15, max_height=0.15, step=0.15, downsampled_scale=0.5).height_field_raw
-        heightfield[3*num_rows:4*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.2, max_height=0.2, step=0.2, downsampled_scale=0.5).height_field_raw
-        heightfield[4*num_rows:5*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.25, max_height=0.25, step=0.25, downsampled_scale=0.5).height_field_raw
-        heightfield[5*num_rows:6*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.3, max_height=0.3, step=0.3, downsampled_scale=0.5).height_field_raw
-        heightfield[6*num_rows:7*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.35, max_height=0.35, step=0.35, downsampled_scale=0.5).height_field_raw
-        heightfield[7*num_rows:8*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.4, max_height=0.4, step=0.4, downsampled_scale=0.5).height_field_raw
+        heightfield[num_rows:2*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.05, max_height=0.1, step=0.1, downsampled_scale=0.5).height_field_raw
+        heightfield[2*num_rows:3*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.05, max_height=0.15, step=0.15, downsampled_scale=0.5).height_field_raw
+        heightfield[3*num_rows:4*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.1, max_height=0.2, step=0.2, downsampled_scale=0.5).height_field_raw
+        heightfield[4*num_rows:5*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.1, max_height=0.25, step=0.25, downsampled_scale=0.5).height_field_raw
+        heightfield[5*num_rows:6*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.15, max_height=0.3, step=0.3, downsampled_scale=0.5).height_field_raw
+        heightfield[6*num_rows:7*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.15, max_height=0.35, step=0.35, downsampled_scale=0.5).height_field_raw
+        heightfield[7*num_rows:8*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.2, max_height=0.4, step=0.4, downsampled_scale=0.5).height_field_raw
 
         # add the terrain as a triangle mesh
         vertices, triangles = convert_heightfield_to_trimesh(heightfield, horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=3.5)
@@ -218,7 +218,7 @@ class Exomy(VecTask):
     def _create_envs(self,num_envs,spacing, num_per_row):
        # define plane on which environments are initialized
         lower = gymapi.Vec3(0.01*-spacing, -spacing, 0.0)
-        upper = gymapi.Vec3(0.01 * spacing, spacing, 10*spacing)
+        upper = gymapi.Vec3(0.01 * spacing, spacing, spacing)
 
         asset_root = "../assets"
         exomy_asset_file = "urdf/exomy_modelv2/urdf/exomy_model.urdf"
@@ -446,6 +446,9 @@ class Exomy(VecTask):
         actions_tensor[14::15]=(motor_velocities[:,1]) #14 #FR DRIVE
         #print(motor_velocities[:,0])
         self.motor_velocities = motor_velocities
+        self.steering_angles = steering_angles
+        self.lin_vel = _actions[:,0]
+        self.ang_vel = _actions[:,0]
 
         # 
         self.gym.set_dof_velocity_target_tensor(self.sim, gymtorch.unwrap_tensor(actions_tensor)) #)
@@ -456,7 +459,10 @@ class Exomy(VecTask):
     def post_physics_step(self):
         # implement post-physics simulation code here
         #    - e.g. compute reward, compute observations
-        
+        """
+            # refresh body tensor
+        """
+
         self.progress_buf += 1
         #self.cameras.render_cameras(self.gym, self.sim)
         #print(torch.max(self.progress_buf))
@@ -474,10 +480,16 @@ class Exomy(VecTask):
         self.compute_rewards()
 
     def compute_observations(self):
-        self.obs_buf[..., 0:2] = (self.target_root_positions[..., 0:2] - self.root_positions[..., 0:2]) / 4
-        self.obs_buf[..., 2] = (self.root_euler[..., 2]  - (math.pi/2)) + (math.pi / (2 * math.pi))
-        #self.obs_buf[..., 3:6] = self.root_linvels
-        #self.obs_buf[..., 6:9] = self.root_angvels
+        self.obs_buf[..., 0:2] = (self.target_root_positions[..., 0:2] - self.root_positions[..., 0:2])
+        self.obs_buf[..., 2] = ((self.root_euler[..., 2])  - (math.pi/2)) + (math.pi / (2 * math.pi))
+        self.obs_buf[..., 3] = self.lin_vel
+        self.obs_buf[..., 4] = self.ang_vel
+        self.obs_buf[..., 5] = self.progress_buf
+        # Heading
+        # Target Dist
+        
+        print(self.obs_buf)
+        #print(self.root_angvels)
         #print(self.obs_buf[0, 2:5])
         #print(tgm.quaternion_to_angle_axis(self.root_quats)[0])
         # self.obs_buf[..., 0:3] = (self.target_root_positions - self.root_positions) / 3
@@ -535,18 +547,18 @@ def compute_exomy_reward(root_positions, target_root_positions,
     distanceReset_penalty = torch.where(target_dist > 4, 1, 0) * 0.1
 
     # Penalty for tilting
-    penaltyAngle = 0.35 #radians
+    penaltyAngle = 0.35 #radians # absolut
     tiltFlag = torch.where((root_euler[:,0] > penaltyAngle) | (root_euler[:,1] > penaltyAngle), 1, 0)
     tiltX = torch.where((tiltFlag == 1) & (root_euler[:,0] > root_euler[:,1]), 1, 0)
     tiltY = torch.where((tiltFlag == 1) & (root_euler[:,0] < root_euler[:,1]), 1, 0)
     tilt_penalty = tiltX * root_euler[:,0] * root_euler[:,0] + tiltY * root_euler[:,1] * root_euler[:,1]
-
+    
 
     # Penalty for not reaching target within max_episode_length
-    time_penalty = torch.where(progress_buf >= max_episode_length - 1, 1, 0)
+    timeReset_penalty = torch.where(progress_buf >= max_episode_length - 1, 1, 0) * 0.1
 
     # Reward function:
-    reward = pos_reward + vel_penalty + goal_reward - heading_penalty - distanceReset_penalty - tilt_penalty - time_penalty - 0.01
+    reward = pos_reward + vel_penalty + goal_reward - heading_penalty - distanceReset_penalty - tilt_penalty - timeReset_penalty - 0.01
     #print(reward)
     #print(reward[0:10])
     #print((torch.max(reward), torch.argmax(reward)))
