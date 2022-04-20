@@ -22,8 +22,8 @@ params:
           val: 0
         fixed_sigma: True
     mlp:
-      units: [256, 256, 128] # Try: 512, 512, 256
-      activation: elu # Try Tanh
+      units: [512, 512, 256] # Try: 512, 512, 256
+      activation: tanh # elu, Tanh
       d2rl: False
       
       initializer:

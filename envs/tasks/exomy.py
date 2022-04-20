@@ -134,7 +134,11 @@ class Exomy(VecTask):
 
 
     def _create_ground_plane(self):
-        """
+        plane_params = gymapi.PlaneParams()
+        # set the nroaml force to be z dimension
+        plane_params.normal = gymapi.Vec3(0.0,0.0,1.0)
+        self.gym.add_ground(self.sim, plane_params)
+        """ One terrain type
         terrain_width = 20.
         terrain_length = 60.
         #plane_params = gymapi.PlaneParams()
@@ -148,7 +152,7 @@ class Exomy(VecTask):
 
         def new_sub_terrain(): return SubTerrain(width=num_rows, length=num_cols, vertical_scale=vertical_scale, horizontal_scale=horizontal_scale)
 
-        heightfield[0:num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=10., amplitude=0.5).height_field_raw
+        heightfield[0:num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0).height_field_raw
         #heightfield[0:num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.1, max_height=0.1, step=0.1, downsampled_scale=0.5).height_field_raw
 
         # add the terrain as a triangle mesh
@@ -160,6 +164,8 @@ class Exomy(VecTask):
         tm_params.transform.p.y = -1.
         self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
         """
+
+        """ 8 terrain types
         num_terains = 8
         terrain_width = 5.
         terrain_length = 200.
@@ -190,7 +196,7 @@ class Exomy(VecTask):
         tm_params.transform.p.x = -4.
         tm_params.transform.p.y = -8.
         self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
-
+        """
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
         # set target position randomly with x, y in (-2, 2) and z in (1, 2)
