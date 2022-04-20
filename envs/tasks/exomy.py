@@ -64,7 +64,7 @@ class Exomy(VecTask):
         self.root_linvels = self.root_states[:, 7:10]
         # Angular Velocity of robot
         self.root_angvels = self.root_states[:, 10:13]
-        
+        #print(self.root_states[0,3])
 
         self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
         self.target_root_positions[:, 2] = 0
@@ -481,14 +481,15 @@ class Exomy(VecTask):
 
     def compute_observations(self):
         self.obs_buf[..., 0:2] = (self.target_root_positions[..., 0:2] - self.root_positions[..., 0:2])
-        self.obs_buf[..., 2] = ((self.root_euler[..., 2])  - (math.pi/2)) + (math.pi / (2 * math.pi))
+        self.obs_buf[..., 2] = ((self.root_euler[..., 2]))#  - (math.pi/2))# + (math.pi / (2 * math.pi))
         self.obs_buf[..., 3] = self.lin_vel
         self.obs_buf[..., 4] = self.ang_vel
         self.obs_buf[..., 5] = self.progress_buf
         # Heading
         # Target Dist
+        # Reset buf
         
-        print(self.obs_buf)
+        #print(self.obs_buf)
         #print(self.root_angvels)
         #print(self.obs_buf[0, 2:5])
         #print(tgm.quaternion_to_angle_axis(self.root_quats)[0])
@@ -552,13 +553,13 @@ def compute_exomy_reward(root_positions, target_root_positions,
     tiltX = torch.where((tiltFlag == 1) & (root_euler[:,0] > root_euler[:,1]), 1, 0)
     tiltY = torch.where((tiltFlag == 1) & (root_euler[:,0] < root_euler[:,1]), 1, 0)
     tilt_penalty = tiltX * root_euler[:,0] * root_euler[:,0] + tiltY * root_euler[:,1] * root_euler[:,1]
-    
+    #print(root_euler[:,2])
 
     # Penalty for not reaching target within max_episode_length
     timeReset_penalty = torch.where(progress_buf >= max_episode_length - 1, 1, 0) * 0.1
 
     # Reward function:
-    reward = pos_reward + vel_penalty + goal_reward - heading_penalty - distanceReset_penalty - tilt_penalty - timeReset_penalty - 0.01
+    reward = pos_reward + goal_reward + vel_penalty - heading_penalty - distanceReset_penalty - tilt_penalty - timeReset_penalty# - 0.01
     #print(reward)
     #print(reward[0:10])
     #print((torch.max(reward), torch.argmax(reward)))
