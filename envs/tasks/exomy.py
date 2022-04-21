@@ -482,7 +482,7 @@ class Exomy(VecTask):
         self.motor_velocities = motor_velocities
         self.steering_angles = steering_angles
         self.lin_vel = _actions[:,0]
-        self.ang_vel = _actions[:,0]
+        self.ang_vel = _actions[:,1]
 
         # 
         self.gym.set_dof_velocity_target_tensor(self.sim, gymtorch.unwrap_tensor(actions_tensor)) #)
