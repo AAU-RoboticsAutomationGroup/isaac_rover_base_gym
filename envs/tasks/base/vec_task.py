@@ -315,6 +315,19 @@ class VecTask(Env):
             actions = self.dr_randomizations['actions']['noise_lambda'](actions)
 
         action_tensor = torch.clamp(actions, -self.clip_actions, self.clip_actions)
+        
+        # Clamp actions to be within 0.1 of previous action (5 percent)
+        lin_condition = torch.where(action_tensor[:,0] > self.obs_buf[:,3], 1, -1)
+        ang_condition = torch.where(action_tensor[:,1] > self.obs_buf[:,4], 1, -1)
+        lin_vel_difference = abs(action_tensor[:,0] - self.obs_buf[:,3])
+        ang_vel_difference = abs(action_tensor[:,1] - self.obs_buf[:,4])
+        lin_vel_dif_clamp = torch.clamp(lin_vel_difference, 0, 0.1)
+        ang_vel_dif_clamp = torch.clamp(ang_vel_difference, 0, 0.1)
+
+        # Clamped actions are saved
+        action_tensor[:,0] = self.obs_buf[:,3] + lin_condition * lin_vel_dif_clamp
+        action_tensor[:,1] = self.obs_buf[:,4] + ang_condition * ang_vel_dif_clamp
+
         # apply actions
         self.pre_physics_step(action_tensor)
 
@@ -331,6 +344,8 @@ class VecTask(Env):
         self.timeout_buf = torch.where(self.progress_buf >= self.max_episode_length - 1, torch.ones_like(self.timeout_buf), torch.zeros_like(self.timeout_buf))
         
         # compute observations, rewards, resets, ...
+        #print("obs: ", self.obs_buf[:,3:5])
+        #print("actions: ", action_tensor)
         self.post_physics_step()
 
         # randomize observations

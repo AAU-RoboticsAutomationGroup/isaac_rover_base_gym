@@ -16,6 +16,8 @@ def timeG(lin_vel,ang_vel):
 @torch.jit.script
 def Ackermann(lin_vel, ang_vel):
     # type: (Tensor, Tensor) -> Tuple[Tensor, Tensor]
+    lin_vel = lin_vel * 30 # Vi ganger med 30 for at få velocities imellem -30 og 30
+    ang_vel = ang_vel * 30 
     
     wheel_x = 12.0
     wheel_y = 20.0
