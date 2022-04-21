@@ -79,7 +79,7 @@ class Env(ABC):
         enable_camera_sensors = config.get("enableCameraSensors", False)
         self.graphics_device_id = graphics_device_id
         if enable_camera_sensors == False and self.headless == True:
-            self.graphics_device_id = -1
+            self.graphics_device_id = 0
 
         self.num_environments = config["env"]["numEnvs"]
         self.num_agents = config["env"].get("numAgents", 1)  # used for multi-agent environments
@@ -324,8 +324,8 @@ class VecTask(Env):
             self.gym.simulate(self.sim)
 
         # to fix!
-        if self.device == 'cpu':
-            self.gym.fetch_results(self.sim, True)
+        #if self.device == 'cpu':
+        #    self.gym.fetch_results(self.sim, True)
 
         # fill time out buffer
         self.timeout_buf = torch.where(self.progress_buf >= self.max_episode_length - 1, torch.ones_like(self.timeout_buf), torch.zeros_like(self.timeout_buf))
@@ -404,6 +404,16 @@ class VecTask(Env):
 
             else:
                 self.gym.poll_viewer_events(self.viewer)
+        else:
+            # fetch results
+            if self.device != 'cpu':
+                self.gym.fetch_results(self.sim, True)
+            # step graphics
+            self.gym.step_graphics(self.sim)
+            # Wait for dt to elapse in real time.
+            # This synchronizes the physics simulation with the rendering rate.
+            self.gym.sync_frame_time(self.sim)
+
 
     def __parse_sim_params(self, physics_engine: str, config_sim: Dict[str, Any]) -> gymapi.SimParams:
         """Parse the config dictionary for physics stepping settings.

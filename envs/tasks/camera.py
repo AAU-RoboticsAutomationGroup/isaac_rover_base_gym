@@ -7,11 +7,11 @@ class camera:
     Instanciate in the *_create_envs* method
     '''
 
-    def __init__(self):
+    def __init__(self, width, height):
         # Camera properties
         self.camera_props = gymapi.CameraProperties()
-        self.camera_props.width = 424     #Pixels width
-        self.camera_props.height = 240    #Pixels height
+        self.camera_props.width = width    #Depth image width
+        self.camera_props.height = height   #Depth image height
         self.camera_props.near_plane = 0.16
         self.camera_props.far_plane = 3
         self.camera_props.enable_tensors = True

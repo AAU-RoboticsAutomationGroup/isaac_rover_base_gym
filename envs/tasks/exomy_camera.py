@@ -25,13 +25,21 @@ class Exomy_camera(VecTask):
         self.cfg = cfg
         #self.Kinematics = Rover()
         self.max_episode_length = self.cfg["env"]["maxEpisodeLength"]
-        self.cfg["env"]["numObservations"] = 3
+
+        self.cam_width = 424
+        self.cam_height = 240
+        self.cam_total_pixels = self.cam_width * self.cam_height
+        self.other_obs = 3
+
         self.cfg["env"]["numActions"] = 2
+        self.using_camera = self.cfg["env"]["enableCameraSensors"]
+        self.cfg["env"]["numObservations"] = self.cam_total_pixels + self.other_obs if self.using_camera else print(" ...ERROR... ")
+
         self.max_effort_vel = 5.2
         self.max_effort_pos = math.pi/2
-        super().__init__(config=self.cfg, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless)
-        
-        
+        super().__init__(config=self.cfg, sim_device=sim_device, graphics_device_id=graphics_device_id, headless=headless) # Hvad fejler den?
+
+
         # Retrieves buffer for Actor root states.
         # position([0:3]), rotation([3:7]), linear velocity([7:10]), and angular velocity([10:13])
         # Buffer has shape (num_environments, num_actors * 13).
@@ -43,7 +51,7 @@ class Exomy_camera(VecTask):
 
 
         # Convert buffer to vector, one is created for the robot and for the marker.
-        vec_root_tensor = gymtorch.wrap_tensor(self.root_tensor).view(self.num_envs, 2, 13)
+        vec_root_tensor = gymtorch.wrap_tensor(self.root_tensor).view(self.num_envs, -1, 13)
         vec_dof_tensor = gymtorch.wrap_tensor(self.dof_state_tensor).view(self.num_envs, dofs_per_env, 2)
         #print(vec_dof_tensor)
         # Position vector for robot
@@ -209,7 +217,9 @@ class Exomy_camera(VecTask):
         marker_options.fix_base_link = True
         marker_asset = self.gym.create_sphere(self.sim, 0.1, marker_options)
 
-        self.cameras = camera()
+        self.cam_tensors = []
+        self.cameras = camera(self.cam_width,self.cam_height)
+        
        
         for i in range(num_envs):
             # Create environment
@@ -232,7 +242,24 @@ class Exomy_camera(VecTask):
 
             # Set DOF control properties
             self.gym.set_actor_dof_properties(env0, exomy0_handle, exomy_dof_props)
-            self.cameras.add_camera(env0, self.gym, exomy0_handle, self.sim)
+            
+            
+            #self.cameras.add_camera(env0, self.gym, exomy0_handle, self.sim) # ERSTATTES MED:
+
+            # Create camera sensor
+            self.camera_handle = self.gym.create_camera_sensor(env0, self.cameras.camera_props)
+            # Add handle to camera_handles
+            self.cameras.camera_handles.append(self.camera_handle)
+            # obtain camera tensor
+            cam_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, env0, self.camera_handle, gymapi.IMAGE_DEPTH)
+            # wrap camera tensor in a pytorch tensor
+            torch_cam_tensor = gymtorch.wrap_tensor(cam_tensor)
+            self.cam_tensors.append(torch_cam_tensor)
+            # Get body handle from robot
+            body = self.gym.find_actor_rigid_body_handle(env0, exomy0_handle, "3D_Cam")
+            body_handle = self.gym.get_actor_rigid_body_handle(env0, exomy0_handle, body)
+            # Attatch camera to body using handles
+            self.gym.attach_camera_to_body(self.camera_handle, env0, body_handle, self.cameras.local_transform, gymapi.FOLLOW_TRANSFORM)
 
             # Spawn marker
             marker_handle = self.gym.create_actor(env0, marker_asset, default_pose, "marker", i, 1, 1)
@@ -324,16 +351,15 @@ class Exomy_camera(VecTask):
         
         self.progress_buf += 1
 
-        self.cameras.render_cameras(self.gym, self.sim)
-
+        # self.cameras.render_cameras(self.gym, self.sim)
         
-        self.gym.start_access_image_tensors(self.sim)
-        # i thinks have to go in here
-        self.gym.end_access_image_tensors(self.sim)   
+        # self.gym.start_access_image_tensors(self.sim)
+        # # # i thinks have to go in here
+        # self.gym.end_access_image_tensors(self.sim)   
 
-        self.visualization = visualize()
-        camera_visualization = "_cam.png" 
-        self.visualization.show_image(self.envs[0], self.exomy_handles[0], self.gym, self.sim, camera_visualization, gymapi.IMAGE_COLOR)
+        # self.visualization = visualize()
+        # camera_visualization = "_cam.png" 
+        # self.visualization.show_image(self.envs[0], self.exomy_handles[0], self.gym, self.sim, camera_visualization, gymapi.IMAGE_COLOR)
 
         # color_image = self.gym.get_camera_image(self.sim, env, camera_handle, gymapi.IMAGE_COLOR)
 
@@ -349,6 +375,17 @@ class Exomy_camera(VecTask):
         self.obs_buf[..., 0:2] = (self.target_root_positions[..., 0:2] - self.root_positions[..., 0:2]) / 4
         self.obs_buf[..., 2] = (self.root_euler[..., 2]  - (math.pi/2)) + (math.pi / (2 * math.pi))
 
+        if self.using_camera:  
+            self.gym.render_all_camera_sensors(self.sim)
+            self.gym.start_access_image_tensors(self.sim)
+
+
+            img_tensor= torch.stack((self.cam_tensors), 0)  # combine images
+            img_tensor = img_tensor*100
+            camera_data = torch.reshape(img_tensor, (self.num_envs, self.cam_total_pixels))
+            print(camera_data)
+            self.obs_buf[..., 3:101765]=camera_data
+            self.gym.end_access_image_tensors(self.sim)
         return self.obs_buf
 
     def compute_rewards(self):
