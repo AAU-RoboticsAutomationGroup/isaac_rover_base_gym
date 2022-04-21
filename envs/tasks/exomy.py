@@ -108,7 +108,7 @@ class Exomy(VecTask):
         cam_pos = gymapi.Vec3(-1.0, -0.6, 0.8)
         cam_target = gymapi.Vec3(1.0, 1.0, 0.15)
         self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
-        print("..init")
+        print(" ... Init done ... ")
 
     def create_sim(self):
         # implement sim set up and environment creation here
@@ -143,10 +143,12 @@ class Exomy(VecTask):
 
 
     def _create_ground_plane(self):
+        """ Plane terrain type
         plane_params = gymapi.PlaneParams()
         # set the nroaml force to be z dimension
         plane_params.normal = gymapi.Vec3(0.0,0.0,1.0)
         self.gym.add_ground(self.sim, plane_params)
+        """
         """ One terrain type
         terrain_width = 20.
         terrain_length = 60.
@@ -174,7 +176,7 @@ class Exomy(VecTask):
         self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
         """
 
-        """ 8 terrain types
+        #8 terrain types
         num_terains = 8
         terrain_width = 5.
         terrain_length = 200.
@@ -205,7 +207,7 @@ class Exomy(VecTask):
         tm_params.transform.p.x = -4.
         tm_params.transform.p.y = -8.
         self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
-        """
+        
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
         # set target position randomly with x, y in (-2, 2) and z in (1, 2)
@@ -312,7 +314,8 @@ class Exomy(VecTask):
         marker_asset = self.gym.create_sphere(self.sim, 0.1, marker_options)
 
         self.cam_tensors = []
-        self.cameras = camera(self.cam_width,self.cam_height)
+        #self.cameras = camera(self.cam_width,self.cam_height) #ERSTATTES MED:
+        self.cam_setup(self.cam_width,self.cam_height)
 
         for i in range(num_envs):
             # Create environment
@@ -341,9 +344,9 @@ class Exomy(VecTask):
             #self.cameras.add_camera(env0, self.gym, exomy0_handle)
 
             # Create camera sensor
-            self.camera_handle = self.gym.create_camera_sensor(env0, self.cameras.camera_props)
+            self.camera_handle = self.gym.create_camera_sensor(env0, self.camera_props)
             # Add handle to camera_handles
-            self.cameras.camera_handles.append(self.camera_handle)
+            self.camera_handles.append(self.camera_handle)
             # obtain camera tensor
             cam_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, env0, self.camera_handle, gymapi.IMAGE_DEPTH)
             # wrap camera tensor in a pytorch tensor
@@ -353,7 +356,7 @@ class Exomy(VecTask):
             body = self.gym.find_actor_rigid_body_handle(env0, exomy0_handle, "3D_Cam")
             body_handle = self.gym.get_actor_rigid_body_handle(env0, exomy0_handle, body)
             # Attatch camera to body using handles
-            self.gym.attach_camera_to_body(self.camera_handle, env0, body_handle, self.cameras.local_transform, gymapi.FOLLOW_TRANSFORM)
+            self.gym.attach_camera_to_body(self.camera_handle, env0, body_handle, self.local_transform, gymapi.FOLLOW_TRANSFORM)
 
             # Spawn marker
             marker_handle = self.gym.create_actor(env0, marker_asset, default_pose, "marker", i, 1, 1)
@@ -459,8 +462,8 @@ class Exomy(VecTask):
         #max = 2
         #actions_tensor = actions.to(self.device).squeeze() * 400
         #pos, vel = self.Kinematics.Get_AckermannValues(1,1)
-        _actions[:,0] = _actions[:,0] * 30 # Vi ganger med 30 for at få velocities imellem -30 og 30
-        _actions[:,1] = _actions[:,1] * 30 
+        # _actions[:,0] = _actions[:,0] * 30 # Vi ganger med 30 for at få velocities imellem -30 og 30
+        # _actions[:,1] = _actions[:,1] * 30 
         steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
         
         actions_tensor[1::15]=(steering_angles[:,2])   #1  #ML POS
@@ -524,7 +527,7 @@ class Exomy(VecTask):
             img_tensor= torch.stack((self.cam_tensors), 0)  # combine images
             img_tensor = img_tensor*100
             camera_data = torch.reshape(img_tensor, (self.num_envs, self.cam_total_pixels))
-            print(camera_data)
+            #print(camera_data) # Used to verify camera input in headless mode
             obs_size = self.cam_total_pixels + self.other_obs
             self.obs_buf[..., 5:101767]=camera_data
             self.gym.end_access_image_tensors(self.sim)
@@ -554,6 +557,22 @@ class Exomy(VecTask):
         self.rew_buf[:], self.reset_buf[:] = compute_exomy_reward(self.root_positions,
             self.target_root_positions, self.root_quats, self.root_euler,
             self.reset_buf, self.progress_buf, self.max_episode_length, self.dt, self.motor_velocities)        
+    
+    def cam_setup(self, width, height):
+       # Camera properties
+        self.camera_props = gymapi.CameraProperties()
+        self.camera_props.width = width    #Depth image width
+        self.camera_props.height = height   #Depth image height
+        self.camera_props.near_plane = 0.16
+        self.camera_props.far_plane = 3
+        self.camera_props.enable_tensors = True
+        #Placement of camera
+        self.local_transform = gymapi.Transform()
+        self.local_transform.p = gymapi.Vec3(0,0,0.01) #Units in meters, (X, Y, Z) - X-up/down, Y-Side, Z-forwards/backwards
+        self.local_transform.r = gymapi.Quat.from_euler_zyx(np.radians(-90),np.radians(-90),np.radians(0))
+        self.camera_handles = []
+        self.cam_tensors = []
+        print(" ... Camera init done ... ")
 
 
 @torch.jit.script
