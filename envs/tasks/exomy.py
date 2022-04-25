@@ -420,25 +420,30 @@ class Exomy(VecTask):
     def pre_physics_step(self, actions):
         # 
         #set_target_ids = (self.progress_buf % 1000 == 0).nonzero(as_tuple=False).squeeze(-1)
-       # if  torch.any(self.progress_buf % 1000 == 0):
+        # if  torch.any(self.progress_buf % 1000 == 0):
             #print(self.marker_positions)
-        target_actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
+        
         #if len(set_target_ids) > 0:
             #target_actor_indices = self.set_targets(set_target_ids)
     
+        # Reset actors when it doesnt reach target within max_length_episode or it moves too far away from target
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
-        #print(len(reset_env_ids))
-        #print(self.reset_buf)
         actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
-        #print(reset_env_ids.size())
         if len(reset_env_ids) > 0:
             actor_indices = self.reset_idx(reset_env_ids)
+        
+        # Resets actor when it has travelled through the entire terrain
+        distance_reset_condition = torch.where(self.root_positions[:,0] >= 0.5, 1, 0)
+        # if len(distance_reset_condition) > 0:
+        #     actor_indices = self.reset_idx(distance_reset_condition)
+        # print(distance_reset_condition)
 
         # Set new targets when an agent reaches current target
+        target_actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
         target_dist = torch.sqrt(torch.square(self.target_root_positions[:,0:2] - self.root_positions[:,0:2]).sum(-1))
         reset_targets = torch.where(target_dist < 0.2, 1, 0) 
         reset_targets_ids = reset_targets.nonzero(as_tuple=False).squeeze(-1)
-        if len(reset_env_ids) > 0:
+        if len(reset_targets_ids) > 0:
             target_actor_indices = self.set_targets(reset_targets_ids)
 
         reset_indices = torch.unique(torch.cat([target_actor_indices]))
@@ -604,10 +609,10 @@ def compute_exomy_reward(root_positions, target_root_positions,
     vel_penalty = ((velocityML + velocityMR) * velocityCondition) * 0.01
 
     # Goal reward for at komme indenfor xx meter af current target
-    goal_reward = torch.where(target_dist < 0.2, 1, 0) * 0.1
+    goal_reward = torch.where(target_dist < 0.2, 1, 0)
     
     # Penalty for moving too far away from target
-    distanceReset_penalty = torch.where(target_dist > 4, 1, 0) * 0.1
+    distanceReset_penalty = torch.where(target_dist > 4, 1, 0)
 
     # Penalty for tilting
     penaltyAngle = 0.35 #radians # absolut
@@ -615,13 +620,12 @@ def compute_exomy_reward(root_positions, target_root_positions,
     tiltX = torch.where((tiltFlag == 1) & (root_euler[:,0] > root_euler[:,1]), 1, 0)
     tiltY = torch.where((tiltFlag == 1) & (root_euler[:,0] < root_euler[:,1]), 1, 0)
     tilt_penalty = tiltX * root_euler[:,0] * root_euler[:,0] + tiltY * root_euler[:,1] * root_euler[:,1]
-    #print(root_euler[:,2])
 
     # Penalty for not reaching target within max_episode_length
-    timeReset_penalty = torch.where(progress_buf >= max_episode_length - 1, 1, 0) * 0.1
+    timeReset_penalty = torch.where(progress_buf >= max_episode_length - 1, 1, 0) * 0.5
 
     # Reward function:
-    reward = pos_reward + goal_reward + vel_penalty - heading_penalty - distanceReset_penalty - tilt_penalty - timeReset_penalty# - 0.01
+    reward = 1.7 * pos_reward + goal_reward + vel_penalty - heading_penalty - distanceReset_penalty - tilt_penalty - timeReset_penalty# - 0.01
     #print(reward)
     #print(reward[0:10])
     #print((torch.max(reward), torch.argmax(reward)))
@@ -630,6 +634,7 @@ def compute_exomy_reward(root_positions, target_root_positions,
     die = torch.zeros_like(reset_buf)
     # resets due to episode length'
     reset = torch.where(progress_buf >= max_episode_length - 1, ones, die)
+    # reset due to distance to target
     reset = torch.where(target_dist >= 4, ones, reset)
 
     
