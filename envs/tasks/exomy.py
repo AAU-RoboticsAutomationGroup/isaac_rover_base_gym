@@ -177,7 +177,7 @@ class Exomy(VecTask):
         """
 
         #8 terrain types
-        num_terains = 8
+        num_terains = 14
         terrain_width = 5.
         terrain_length = 200.
         horizontal_scale = 0.25  # [m]
@@ -191,13 +191,19 @@ class Exomy(VecTask):
 
 
         heightfield[0:num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
-        heightfield[num_rows:2*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.05, max_height=0.1, step=0.1, downsampled_scale=0.5).height_field_raw
-        heightfield[2*num_rows:3*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.05, max_height=0.15, step=0.15, downsampled_scale=0.5).height_field_raw
-        heightfield[3*num_rows:4*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.1, max_height=0.2, step=0.2, downsampled_scale=0.5).height_field_raw
-        heightfield[4*num_rows:5*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.1, max_height=0.25, step=0.25, downsampled_scale=0.5).height_field_raw
-        heightfield[5*num_rows:6*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.15, max_height=0.3, step=0.3, downsampled_scale=0.5).height_field_raw
-        heightfield[6*num_rows:7*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.15, max_height=0.35, step=0.35, downsampled_scale=0.5).height_field_raw
-        heightfield[7*num_rows:8*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.2, max_height=0.4, step=0.4, downsampled_scale=0.5).height_field_raw
+        heightfield[num_rows:2*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
+        heightfield[2*num_rows:3*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
+        heightfield[3*num_rows:4*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
+        heightfield[4*num_rows:5*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.025, max_height=0.075, step=0.1, downsampled_scale=0.5).height_field_raw
+        heightfield[5*num_rows:6*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.05, max_height=0.1, step=0.1, downsampled_scale=0.5).height_field_raw
+        heightfield[6*num_rows:7*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.05, max_height=0.1, step=0.1, downsampled_scale=0.5).height_field_raw
+        heightfield[7*num_rows:8*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.025, max_height=0.075, step=0.1, downsampled_scale=0.5).height_field_raw
+        heightfield[8*num_rows:9*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=2., num_rects=40).height_field_raw
+        heightfield[9*num_rows:10*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=2., num_rects=40).height_field_raw
+        heightfield[10*num_rows:11*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=2., num_rects=40).height_field_raw
+        heightfield[11*num_rows:12*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=2., num_rects=40).height_field_raw
+        heightfield[12*num_rows:13*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=2., num_rects=40).height_field_raw
+        heightfield[13*num_rows:14*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=2., num_rects=40).height_field_raw
 
         # add the terrain as a triangle mesh
         vertices, triangles = convert_heightfield_to_trimesh(heightfield, horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=3.5)
@@ -205,9 +211,10 @@ class Exomy(VecTask):
         tm_params.nb_vertices = vertices.shape[0]
         tm_params.nb_triangles = triangles.shape[0]
         tm_params.transform.p.x = -4.
-        tm_params.transform.p.y = -8.
+        tm_params.transform.p.y = -4.
         self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
-        
+        self.terrain_width = (num_terains * terrain_width) + tm_params.transform.p.y - 1.0
+
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
         # set target position randomly with x, y in (-2, 2) and z in (1, 2)
@@ -433,10 +440,10 @@ class Exomy(VecTask):
             actor_indices = self.reset_idx(reset_env_ids)
         
         # Resets actor when it has travelled through the entire terrain
-        distance_reset_condition = torch.where(self.root_positions[:,0] >= 0.5, 1, 0)
-        # if len(distance_reset_condition) > 0:
-        #     actor_indices = self.reset_idx(distance_reset_condition)
-        # print(distance_reset_condition)
+        distance_condition = torch.where(self.root_positions[:,0] >= self.terrain_width, 1, 0)
+        reset_dist_ids = distance_condition.nonzero(as_tuple=False).squeeze(-1)
+        if len(reset_dist_ids) > 0:
+            actor_indices = self.reset_idx(reset_dist_ids)
 
         # Set new targets when an agent reaches current target
         target_actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
