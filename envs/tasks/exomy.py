@@ -35,8 +35,8 @@ class Exomy(VecTask):
         #self.Kinematics = Rover()
         self.max_episode_length = self.cfg["env"]["maxEpisodeLength"]
 
-        self.cam_width = 424
-        self.cam_height = 240
+        self.cam_width = 10
+        self.cam_height = 10
         self.cam_total_pixels = self.cam_width * self.cam_height
         self.other_obs = 5
 
@@ -220,7 +220,7 @@ class Exomy(VecTask):
         # set target position randomly with x, y in (-2, 2) and z in (1, 2)
         #print("ASDO:JNHSAOJPNHDJNO:HASDJUOIP")
         alpha = math.pi * torch.rand(num_sets, device=self.device) - 90
-        TargetRadius = 2
+        TargetRadius = 1.0
         TargetCordx = 0
         TargetCordy = 0
         RobotCordx = self.root_positions[env_ids,0]
