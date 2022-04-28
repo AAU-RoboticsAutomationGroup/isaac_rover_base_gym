@@ -1,4 +1,6 @@
 import math
+import time
+from turtle import pos
 import numpy as np
 import os
 import torch
@@ -38,7 +40,7 @@ class Exomy(VecTask):
         self.cam_width = 10
         self.cam_height = 10
         self.cam_total_pixels = self.cam_width * self.cam_height
-        self.other_obs = 5
+        self.other_obs = 8
 
         self.cfg["env"]["numActions"] = 2
         self.using_camera = self.cfg["env"]["enableCameraSensors"]
@@ -220,7 +222,7 @@ class Exomy(VecTask):
         # set target position randomly with x, y in (-2, 2) and z in (1, 2)
         #print("ASDO:JNHSAOJPNHDJNO:HASDJUOIP")
         alpha = math.pi * torch.rand(num_sets, device=self.device) - 90
-        TargetRadius = 1.0
+        TargetRadius = 2.5
         TargetCordx = 0
         TargetCordy = 0
         RobotCordx = self.root_positions[env_ids,0]
@@ -447,8 +449,8 @@ class Exomy(VecTask):
 
         # Set new targets when an agent reaches current target
         target_actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
-        target_dist = torch.sqrt(torch.square(self.target_root_positions[:,0:2] - self.root_positions[:,0:2]).sum(-1))
-        reset_targets = torch.where(target_dist < 0.2, 1, 0) 
+        self.target_distance = torch.sqrt(torch.square(self.target_root_positions[:,0:2] - self.root_positions[:,0:2]).sum(-1))
+        reset_targets = torch.where(self.target_distance < 0.4, 1, 0) 
         reset_targets_ids = reset_targets.nonzero(as_tuple=False).squeeze(-1)
         if len(reset_targets_ids) > 0:
             target_actor_indices = self.set_targets(reset_targets_ids)
@@ -456,59 +458,38 @@ class Exomy(VecTask):
         reset_indices = torch.unique(torch.cat([target_actor_indices]))
         if len(reset_indices) > 0:
             self.gym.set_actor_root_state_tensor_indexed(self.sim, self.root_tensor, gymtorch.unwrap_tensor(reset_indices), len(reset_indices))
-        # if  (self.progress_buf % 500 == 0).nonzero(as_tuple=False).squeeze(-1):
-        #     print(self.marker_positions)
-        #print(self.marker_positions)
-        #print("exomy")
-        #print(self.target_root_positions)
+        
+        # initialise actions_tensor:
         actions_tensor = torch.zeros(self.num_envs * self.num_dof, device=self.device, dtype=torch.float)
         _actions = actions.to(self.device)
-
-        # actions_tensor[::self.num_dof] = actions.to(self.device).squeeze()
-        # #print(np.shape(_actions))
-        #print(np.shape(_actions))
-        # print(actions.size())
-
-        #DRV_LF_joint_dof_handle = self.gym.find_actor_dof_handle(self.envs[0], self.exomy_handles[0], "DRV_LF_joint")
-        #max = 100
-        #max = 2
-        #actions_tensor = actions.to(self.device).squeeze() * 400
-        #pos, vel = self.Kinematics.Get_AckermannValues(1,1)
-        # _actions[:,0] = _actions[:,0] * 30 # Vi ganger med 30 for at få velocities imellem -30 og 30
-        # _actions[:,1] = _actions[:,1] * 30 
-        steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
         
-        actions_tensor[1::15]=(steering_angles[:,2])   #1  #ML POS
+        # get steering_angles and motor_velocities using kinematicsUpdated (ackermann)
+        steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
+        # set actions_tensor for the rover:
+        actions_tensor[1::15]=(steering_angles[:,3])   #1  #ML POS
         actions_tensor[2::15]=(motor_velocities[:,2])  #2  #ML DRIVE
-        actions_tensor[3::15]=(steering_angles[:,0])   #3   #FL POS
+        actions_tensor[3::15]=(steering_angles[:,1])   #3   #FL POS
         actions_tensor[4::15]=(motor_velocities[:,0])  #4  #FL DRIVE
-        actions_tensor[6::15]=(steering_angles[:,4])   #6  #RL POS
+        actions_tensor[6::15]=(steering_angles[:,5])   #6  #RL POS
         actions_tensor[7::15]=(motor_velocities[:,4])  #7  #RL DRIVE
-        actions_tensor[8::15]=(steering_angles[:,5])   #8  #RR POS
+        actions_tensor[8::15]=(steering_angles[:,4])   #8  #RR POS
         actions_tensor[9::15]=(motor_velocities[:,5])  #9  #RR DRIVE
-        actions_tensor[11::15]=(steering_angles[:,3])  #11 #MR POS  
+        actions_tensor[11::15]=(steering_angles[:,2])  #11 #MR POS  
         actions_tensor[12::15]= (motor_velocities[:,3])#12 #MR DRIVE
-        actions_tensor[13::15]=(steering_angles[:,1])  #13 #FR POS
+        actions_tensor[13::15]=(steering_angles[:,0])  #13 #FR POS
         actions_tensor[14::15]=(motor_velocities[:,1]) #14 #FR DRIVE
-        #print(motor_velocities[:,0])
+        # Save velocities and angles for later use in observations and reward computation:
         self.motor_velocities = motor_velocities
         self.steering_angles = steering_angles
         self.lin_vel = _actions[:,0]
         self.ang_vel = _actions[:,1]
 
-        # 
         self.gym.set_dof_velocity_target_tensor(self.sim, gymtorch.unwrap_tensor(actions_tensor)) #)
         self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(actions_tensor)) #)
-        #forces = gymtorch.unwrap_tensor(actions_tensor)
-        #self.gym.set_dof_actuation_force_tensor(self.sim, forces)
         
     def post_physics_step(self):
         # implement post-physics simulation code here
         #    - e.g. compute reward, compute observations
-        """
-            # refresh body tensor
-        """
-
         self.progress_buf += 1
         #self.cameras.render_cameras(self.gym, self.sim)
         #print(torch.max(self.progress_buf))
@@ -519,7 +500,18 @@ class Exomy(VecTask):
         #self.root_euler = tgm.quaternion_to_angle_axis(self.root_quats)
         time = torch.tensor(self.dt)
         
-        
+
+        # Target vector relative to the rover
+        target_vector = self.target_root_positions[..., 0:2] - self.root_positions[..., 0:2]
+
+        # Heading difference (rover-direction / target-vector)
+        eps = 1e-7
+        dot =  ((target_vector[..., 0] * torch.cos(self.root_euler[..., 2] - (math.pi/2))) + (target_vector[..., 1] * torch.sin(self.root_euler[..., 2] - (math.pi/2)))) / ((torch.sqrt(torch.square(target_vector[..., 0]) + torch.square(target_vector[..., 1]))) * torch.sqrt(torch.square(torch.cos(self.root_euler[..., 2] - (math.pi/2))) + torch.square(torch.sin(self.root_euler[..., 2] - (math.pi/2)))))
+        angle = torch.clamp(dot, min = (-1 + eps), max = (1 - eps))
+        self.heading_diff = torch.arccos(angle)
+
+        # distance to target
+        self.target_dist = torch.sqrt(torch.square(self.target_root_positions[:,0:2] - self.root_positions[:,0:2]).sum(-1))
 
         #print(self.vec_root_tensor)
         self.compute_observations()
@@ -528,47 +520,33 @@ class Exomy(VecTask):
     def compute_observations(self):
         self.obs_buf[..., 0:2] = (self.target_root_positions[..., 0:2] - self.root_positions[..., 0:2])
         self.obs_buf[..., 2] = ((self.root_euler[..., 2]))#  - (math.pi/2))# + (math.pi / (2 * math.pi))
-        self.obs_buf[..., 3] = self.lin_vel
-        self.obs_buf[..., 4] = self.ang_vel
-        self.obs_buf[..., 5] = self.progress_buf
+        self.obs_buf[..., 3] = self.heading_diff # skal den vise om det er positiv eller negativ rotation?
+        self.obs_buf[..., 4] = self.lin_vel
+        self.obs_buf[..., 5] = self.ang_vel
+        self.obs_buf[..., 6] = self.progress_buf
+        self.obs_buf[..., 7] = self.target_dist
         if self.using_camera:  
             self.gym.render_all_camera_sensors(self.sim)
             self.gym.start_access_image_tensors(self.sim)
 
 
             img_tensor= torch.stack((self.cam_tensors), 0)  # combine images
-            img_tensor = img_tensor*100
+            img_tensor = img_tensor * 100
             camera_data = torch.reshape(img_tensor, (self.num_envs, self.cam_total_pixels))
             #print(camera_data) # Used to verify camera input in headless mode
             obs_size = self.cam_total_pixels + self.other_obs
-            self.obs_buf[..., 5:101767]=camera_data
+            self.obs_buf[..., self.other_obs:obs_size]=camera_data
             self.gym.end_access_image_tensors(self.sim)
         # Heading
-        # Target Dist
         # Reset buf
-        
-        #print(self.obs_buf)
-        #print(self.root_angvels)
-        #print(self.obs_buf[0, 2:5])
-        #print(tgm.quaternion_to_angle_axis(self.root_quats)[0])
-        # self.obs_buf[..., 0:3] = (self.target_root_positions - self.root_positions) / 3
-        # self.obs_buf[..., 3:7] = self.root_quats
-        # self.obs_buf[..., 7:10] = self.root_linvels / 2
-        # self.obs_buf[..., 10:13] = self.root_angvels / math.pi
+        # print("Euler: ", self.obs_buf[0,3])
+
         return self.obs_buf
 
     def compute_rewards(self):
-
-        
-        #print(target_dist)
-        #print(target_heading)
-        #print(root_euler)
-        #heading_diff = target_heading - root_euler
-        #print(heading_diff)
-
-        self.rew_buf[:], self.reset_buf[:] = compute_exomy_reward(self.root_positions,
-            self.target_root_positions, self.root_quats, self.root_euler,
-            self.reset_buf, self.progress_buf, self.max_episode_length, self.dt, self.motor_velocities)        
+        # Determine rewards and which environments to reset
+        self.rew_buf[:], self.reset_buf[:] = compute_exomy_reward(self.root_euler,
+            self.reset_buf, self.progress_buf, self.max_episode_length, self.motor_velocities, self.heading_diff, self.target_dist, self.lin_vel, self.ang_vel)        
     
     def cam_setup(self, width, height):
        # Camera properties
@@ -588,35 +566,23 @@ class Exomy(VecTask):
 
 
 @torch.jit.script
-def compute_exomy_reward(root_positions, target_root_positions,
-        root_quats, root_euler, reset_buf, progress_buf, max_episode_length, dt, motor_velocities):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, float, Tensor) -> Tuple[Tensor, Tensor]
-
-    # distance to target
-    #target_heading = torch.tensor(len(target_root_positions))
-    target_dist = torch.sqrt(torch.square(target_root_positions[:,0:2] - root_positions[:,0:2]).sum(-1))
-    #print("target_dist", target_dist)
-    target_vector = target_root_positions[..., 0:2] - root_positions[..., 0:2]
-    #print(torch.max(heading_diff))
+def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length, motor_velocities, heading_diff, target_dist, lin_vel, ang_vel):
+    # type: (Tensor, Tensor, Tensor, float, Tensor, Tensor, Tensor, Tensor, Tensor) -> Tuple[Tensor, Tensor]
 
     # Heading penalty. Penalty for pointing away from target. Penalty increases with target_dist (heading close to target is not as relevant)
-    eps = 1e-7
-    dot =  ((target_vector[..., 0] * torch.cos(root_euler[..., 2] - (math.pi/2))) + (target_vector[..., 1] * torch.sin(root_euler[..., 2] - (math.pi/2)))) / ((torch.sqrt(torch.square(target_vector[..., 0]) + torch.square(target_vector[..., 1]))) * torch.sqrt(torch.square(torch.cos(root_euler[..., 2] - (math.pi/2))) + torch.square(torch.sin(root_euler[..., 2] - (math.pi/2)))))
-    angle = torch.clamp(dot, min = (-1 + eps), max = (1 - eps))
-    heading_diff = torch.arccos(angle)
-    heading_penalty = heading_diff * heading_diff * target_dist * 0.01
+    heading_reward = 1.0 / (1.0 + heading_diff * heading_diff * target_dist)
 
     # position reward
-    pos_reward = 1.0 / (1.0 + target_dist * target_dist)
+    pos_reward = 1.0 / (0.5 + target_dist * target_dist)
     
     # Reversing penalty: Den kører baglaens: reward = -(velocity1 + velocity2) * 0.5
     velocityML = motor_velocities[:,2]
     velocityMR = motor_velocities[:,3]
     velocityCondition = torch.where(((velocityML > 0) | (velocityMR > 0)), 0, 1)
-    vel_penalty = ((velocityML + velocityMR) * velocityCondition) * 0.01
+    vel_penalty = ((velocityML + velocityMR) * velocityCondition)
 
     # Goal reward for at komme indenfor xx meter af current target
-    goal_reward = torch.where(target_dist < 0.2, 1, 0)
+    goal_reward = torch.where(target_dist < 0.4, 1, 0)
     
     # Penalty for moving too far away from target
     distanceReset_penalty = torch.where(target_dist > 4, 1, 0)
@@ -629,20 +595,34 @@ def compute_exomy_reward(root_positions, target_root_positions,
     tilt_penalty = tiltX * root_euler[:,0] * root_euler[:,0] + tiltY * root_euler[:,1] * root_euler[:,1]
 
     # Penalty for not reaching target within max_episode_length
-    timeReset_penalty = torch.where(progress_buf >= max_episode_length - 1, 1, 0) * 0.5
+    timeReset_penalty = torch.where(progress_buf >= max_episode_length - 1, 1, 0)
+
+    # time penalty:
+    time_penalty = progress_buf
+
+    # Point turn reward: reward for turning on the spot
+    pointTurn_reward = torch.where(torch.div(abs(lin_vel), abs(ang_vel)) < 0.101, 1, 0)
+
+    # Constants for penalties and rewards:
+    pos_reward = pos_reward * 5.0
+    goal_reward = goal_reward * 10.0
+    vel_penalty = vel_penalty * 0.01
+    heading_reward = heading_reward * 2.0
+    tilt_penalty = tilt_penalty * 1
+    distanceReset_penalty = distanceReset_penalty * 1
+    timeReset_penalty = timeReset_penalty * 0.05
+    time_penalty = time_penalty * 0.001
+    pointTurn_reward = pointTurn_reward * 0.2
+    # print("goal: ", pos_reward[0], goal_reward[0], vel_penalty[0], heading_reward[0], tilt_penalty[0], distanceReset_penalty[0], timeReset_penalty[0], time_penalty[0])
 
     # Reward function:
-    reward = 1.7 * pos_reward + goal_reward + vel_penalty - heading_penalty - distanceReset_penalty - tilt_penalty - timeReset_penalty# - 0.01
-    #print(reward)
-    #print(reward[0:10])
+    reward = pos_reward + heading_reward + goal_reward + pointTurn_reward + vel_penalty - distanceReset_penalty - tilt_penalty - timeReset_penalty - time_penalty
     #print((torch.max(reward), torch.argmax(reward)))
 
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
-    # resets due to episode length'
+    # resets due to episode length and target distance
     reset = torch.where(progress_buf >= max_episode_length - 1, ones, die)
-    # reset due to distance to target
     reset = torch.where(target_dist >= 4, ones, reset)
-
     
-    return reward, reset        
+    return reward, reset
