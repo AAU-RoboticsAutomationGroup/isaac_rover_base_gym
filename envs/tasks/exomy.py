@@ -464,6 +464,8 @@ class Exomy(VecTask):
         _actions = actions.to(self.device)
         
         # get steering_angles and motor_velocities using kinematicsUpdated (ackermann)
+        # _actions[:,0] = 0.200
+        # _actions[:,1] = 1
         steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
         # set actions_tensor for the rover:
         actions_tensor[1::15]=(steering_angles[:,3])   #1  #ML POS
@@ -573,7 +575,7 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     heading_reward = 1.0 / (1.0 + heading_diff * heading_diff * target_dist)
 
     # position reward
-    pos_reward = 1.0 / (0.5 + target_dist * target_dist)
+    pos_reward = 1.0 / (0.2 + target_dist * target_dist)
     
     # Reversing penalty: Den kører baglaens: reward = -(velocity1 + velocity2) * 0.5
     velocityML = motor_velocities[:,2]
@@ -601,20 +603,20 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     time_penalty = progress_buf
 
     # Point turn reward: reward for turning on the spot
-    pointTurn_reward = torch.where(torch.div(abs(lin_vel), abs(ang_vel)) < 0.101, 1, 0)
+    pointTurn_reward = torch.where(torch.div(abs(lin_vel), abs(ang_vel)) < 0.201, 1, 0)
 
     # Constants for penalties and rewards:
-    pos_reward = pos_reward * 5.0
-    goal_reward = goal_reward * 10.0
+    pos_reward = pos_reward * 8.0
+    goal_reward = goal_reward * 50.0
     vel_penalty = vel_penalty * 0.01
-    heading_reward = heading_reward * 2.0
+    heading_reward = heading_reward * 4.0
     tilt_penalty = tilt_penalty * 1
     distanceReset_penalty = distanceReset_penalty * 1
-    timeReset_penalty = timeReset_penalty * 0.05
-    time_penalty = time_penalty * 0.001
-    pointTurn_reward = pointTurn_reward * 0.2
+    timeReset_penalty = timeReset_penalty * 20
+    time_penalty = time_penalty * 0.01
+    pointTurn_reward = pointTurn_reward * 0.4
     # print("goal: ", pos_reward[0], goal_reward[0], vel_penalty[0], heading_reward[0], tilt_penalty[0], distanceReset_penalty[0], timeReset_penalty[0], time_penalty[0])
-
+    print(pointTurn_reward)
     # Reward function:
     reward = pos_reward + heading_reward + goal_reward + pointTurn_reward + vel_penalty - distanceReset_penalty - tilt_penalty - timeReset_penalty - time_penalty
     #print((torch.max(reward), torch.argmax(reward)))
