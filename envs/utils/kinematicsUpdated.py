@@ -41,8 +41,8 @@ def Ackermann(lin_vel, ang_vel):
     #         """
     #steering_condition0 = (ang_vel == 0)
     steering_condition1 = (radius <= x_side)
-    steering_condition2 = ((torch.logical_not(radius <= x_side)) & (((ang_vel > 0) & ((torch.sign(lin_vel) > 0))) | ((ang_vel < 0) & ((torch.sign(lin_vel)) < 0))))
-    steering_condition3 = ((torch.logical_not(radius <= x_side)) & (((ang_vel < 0) & ((torch.sign(lin_vel) > 0))) | ((ang_vel > 0) & ((torch.sign(lin_vel)) < 0))))
+    steering_condition2 = ((torch.logical_not(radius <= x_side)) & (((ang_vel < 0) & ((torch.sign(lin_vel) > 0))) | ((ang_vel > 0) & ((torch.sign(lin_vel)) < 0))))
+    steering_condition3 = ((torch.logical_not(radius <= x_side)) & (((ang_vel > 0) & ((torch.sign(lin_vel) > 0))) | ((ang_vel < 0) & ((torch.sign(lin_vel)) < 0))))
     #         """
     #         Steering angles calculation 
     #         """   
@@ -162,11 +162,11 @@ def Ackermann(lin_vel, ang_vel):
     relationRearFront = rearLeft/frontLeft
     
     motor_velocities[:,0] = torch.where(velocity_condition4, lin_vel, motor_velocities[:,0])
-    motor_velocities[:,1] = torch.where(velocity_condition4, lin_vel*relationFront, motor_velocities[:,0])
-    motor_velocities[:,2] = torch.where(velocity_condition4, lin_vel*relationCenterFront, motor_velocities[:,0])
-    motor_velocities[:,3] = torch.where(velocity_condition4, lin_vel*relationCenterFront*relationCenter, motor_velocities[:,0])
-    motor_velocities[:,4] = torch.where(velocity_condition4, lin_vel*relationRearFront, motor_velocities[:,0])
-    motor_velocities[:,5] = torch.where(velocity_condition4, lin_vel*relationRearFront*relationRear, motor_velocities[:,0])
+    motor_velocities[:,1] = torch.where(velocity_condition4, lin_vel*relationFront, motor_velocities[:,1])
+    motor_velocities[:,2] = torch.where(velocity_condition4, lin_vel*relationCenterFront, motor_velocities[:,2])
+    motor_velocities[:,3] = torch.where(velocity_condition4, lin_vel*relationCenterFront*relationCenter, motor_velocities[:,3])
+    motor_velocities[:,4] = torch.where(velocity_condition4, lin_vel*relationRearFront, motor_velocities[:,4])
+    motor_velocities[:,5] = torch.where(velocity_condition4, lin_vel*relationRearFront*relationRear, motor_velocities[:,5])
     
     return steering_angles, motor_velocities
 
