@@ -44,8 +44,8 @@ headless: False
 
 # set default task and default training config based on task
 defaults:
-  - task: Ant
-  - train: ${task}PPO
+  - task: Exomy
+  - train: ${task}PPO64
   - hydra/job_logging: disabled
 
 # set the directory where the output files get saved
