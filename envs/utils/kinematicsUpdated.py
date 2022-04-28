@@ -39,20 +39,22 @@ def Ackermann(lin_vel, ang_vel):
     #         """
     #         Steering angles conditions 
     #         """
-    #steering_condition0 = (ang_vel == 0)
-    steering_condition1 = (radius <= x_side)
-    steering_condition2 = ((torch.logical_not(radius <= x_side)) & (((ang_vel < 0) & ((torch.sign(lin_vel) > 0))) | ((ang_vel > 0) & ((torch.sign(lin_vel)) < 0))))
-    steering_condition3 = ((torch.logical_not(radius <= x_side)) & (((ang_vel > 0) & ((torch.sign(lin_vel) > 0))) | ((ang_vel < 0) & ((torch.sign(lin_vel)) < 0))))
+    steering_condition0 = ((ang_vel == 0) & (torch.logical_not(lin_vel == 0)))
+    steering_condition1 = ((radius <= x_side + 10) & (torch.logical_not(ang_vel == 0)))
+    steering_condition2 = ((torch.logical_not(radius <= x_side + 10)) & (((ang_vel < 0) & ((torch.sign(lin_vel) > 0))) | ((ang_vel > 0) & ((torch.sign(lin_vel)) < 0))))
+    steering_condition3 = ((torch.logical_not(radius <= x_side + 10)) & (((ang_vel > 0) & ((torch.sign(lin_vel) > 0))) | ((ang_vel < 0) & ((torch.sign(lin_vel)) < 0))))
     #         """
     #         Steering angles calculation 
     #         """   
+
     # If the ang_vel is 0, the steering angles is set to 0:
-    #steering_angles[:,0] = torch.where(steering_condition0, 0, steering_angles[:,0])
-    #steering_angles[:,1] = torch.where(steering_condition0, 0, steering_angles[:,1])
-    #steering_angles[:,2] = torch.where(steering_condition0, 0, steering_angles[:,2])
-    #steering_angles[:,3] = torch.where(steering_condition0, 0, steering_angles[:,3])
-    #steering_angles[:,4] = torch.where(steering_condition0, 0, steering_angles[:,4])
-    #steering_angles[:,5] = torch.where(steering_condition0, 0, steering_angles[:,5])
+    move_straight = torch.tensor(0.0,device='cuda:0').repeat(lin_vel.size(dim=0))
+    steering_angles[:,0] = torch.where(steering_condition0, move_straight, steering_angles[:,0])
+    steering_angles[:,1] = torch.where(steering_condition0, move_straight, steering_angles[:,1])
+    # steering_angles[:,2] = torch.where(steering_condition0, 0, steering_angles[:,2])
+    # steering_angles[:,3] = torch.where(steering_condition0, 0, steering_angles[:,3])
+    steering_angles[:,4] = torch.where(steering_condition0, move_straight, steering_angles[:,4])
+    steering_angles[:,5] = torch.where(steering_condition0, move_straight, steering_angles[:,5])
     
     # If the turning point is within the chassis of the robot, turn on the spot:
     turn_on_the_spot_top = torch.tensor(torch.atan2(y_top,x_side),device='cuda:0').repeat(lin_vel.size(dim=0))
@@ -86,13 +88,15 @@ def Ackermann(lin_vel, ang_vel):
     #  Motor speeds conditions
     #  
     velocity_condition0 = (ang_vel == 0)
-    velocity_condition1 = (radius <= x_side) & (ang_vel > 0)
-    velocity_condition2 = (radius <= x_side) & (ang_vel < 0) #  elif radius[idx] <= x_side and ang_vel[idx] < 0: 
-    velocity_condition3 = torch.logical_not((radius <= x_side)) & (ang_vel > 0)# ang_vel[idx] > 0:
-    velocity_condition4 = torch.logical_not((radius <= x_side)) & (ang_vel < 0)# ang_vel[idx] < 0:
+    velocity_condition1 = ((radius <= x_side + 10) & (ang_vel > 0))
+    velocity_condition2 = ((radius <= x_side + 10) & (ang_vel < 0)) #  elif radius[idx] <= x_side and ang_vel[idx] < 0: 
+    velocity_condition3 = ((torch.logical_not((radius <= x_side + 10))) & (ang_vel > 0))# ang_vel[idx] > 0:
+    velocity_condition4 = ((torch.logical_not((radius <= x_side + 10))) & (ang_vel < 0))# ang_vel[idx] < 0:
+
     #         """
     #         Motor speeds calculation 
     #         """
+
     # Speed moving forward/backward = linear velocity
     motor_velocities[:,0] = torch.where(velocity_condition0, lin_vel, motor_velocities[:,0])
     motor_velocities[:,1] = torch.where(velocity_condition0, lin_vel, motor_velocities[:,1])
