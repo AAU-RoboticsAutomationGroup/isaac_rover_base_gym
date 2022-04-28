@@ -616,7 +616,7 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     time_penalty = time_penalty * 0.01
     pointTurn_reward = pointTurn_reward * 0.4
     # print("goal: ", pos_reward[0], goal_reward[0], vel_penalty[0], heading_reward[0], tilt_penalty[0], distanceReset_penalty[0], timeReset_penalty[0], time_penalty[0])
-    print(pointTurn_reward)
+
     # Reward function:
     reward = pos_reward + heading_reward + goal_reward + pointTurn_reward + vel_penalty - distanceReset_penalty - tilt_penalty - timeReset_penalty - time_penalty
     #print((torch.max(reward), torch.argmax(reward)))
