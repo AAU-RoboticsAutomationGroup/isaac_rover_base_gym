@@ -1,6 +1,8 @@
 import math
 import time
 from turtle import pos
+
+from cv2 import StereoBM_PREFILTER_XSOBEL
 import numpy as np
 import os
 import torch
@@ -37,10 +39,10 @@ class Exomy(VecTask):
         #self.Kinematics = Rover()
         self.max_episode_length = self.cfg["env"]["maxEpisodeLength"]
 
-        self.cam_width = 10
-        self.cam_height = 10
+        self.cam_width = 3
+        self.cam_height = 3
         self.cam_total_pixels = self.cam_width * self.cam_height
-        self.other_obs = 8
+        self.other_obs = 5
 
         self.cfg["env"]["numActions"] = 2
         self.using_camera = self.cfg["env"]["enableCameraSensors"]
@@ -464,8 +466,8 @@ class Exomy(VecTask):
         _actions = actions.to(self.device)
         
         # get steering_angles and motor_velocities using kinematicsUpdated (ackermann)
-        # _actions[:,0] = 0.200
-        # _actions[:,1] = 1
+        # _actions[:,0] = 0.01
+        # _actions[:,1] = 0.5
         steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
         # set actions_tensor for the rover:
         actions_tensor[1::15]=(steering_angles[:,3])   #1  #ML POS
@@ -509,7 +511,9 @@ class Exomy(VecTask):
         # Heading difference (rover-direction / target-vector)
         eps = 1e-7
         dot =  ((target_vector[..., 0] * torch.cos(self.root_euler[..., 2] - (math.pi/2))) + (target_vector[..., 1] * torch.sin(self.root_euler[..., 2] - (math.pi/2)))) / ((torch.sqrt(torch.square(target_vector[..., 0]) + torch.square(target_vector[..., 1]))) * torch.sqrt(torch.square(torch.cos(self.root_euler[..., 2] - (math.pi/2))) + torch.square(torch.sin(self.root_euler[..., 2] - (math.pi/2)))))
+        condition =  ((target_vector[..., 0] * torch.cos(self.root_euler[..., 2])) + (target_vector[..., 1] * torch.sin(self.root_euler[..., 2]))) / ((torch.sqrt(torch.square(target_vector[..., 0]) + torch.square(target_vector[..., 1]))) * torch.sqrt(torch.square(torch.cos(self.root_euler[..., 2])) + torch.square(torch.sin(self.root_euler[..., 2]))))
         angle = torch.clamp(dot, min = (-1 + eps), max = (1 - eps))
+        self.obs_heading_diff = torch.where(condition < 0, -1 * torch.arccos(angle), torch.arccos(angle))
         self.heading_diff = torch.arccos(angle)
 
         # distance to target
@@ -520,13 +524,13 @@ class Exomy(VecTask):
         self.compute_rewards()
 
     def compute_observations(self):
-        self.obs_buf[..., 0:2] = (self.target_root_positions[..., 0:2] - self.root_positions[..., 0:2])
-        self.obs_buf[..., 2] = ((self.root_euler[..., 2]))#  - (math.pi/2))# + (math.pi / (2 * math.pi))
-        self.obs_buf[..., 3] = self.heading_diff # skal den vise om det er positiv eller negativ rotation?
-        self.obs_buf[..., 4] = self.lin_vel
-        self.obs_buf[..., 5] = self.ang_vel
-        self.obs_buf[..., 6] = self.progress_buf
-        self.obs_buf[..., 7] = self.target_dist
+        self.obs_buf[..., 0] = self.lin_vel
+        self.obs_buf[..., 1] = self.ang_vel
+        # self.obs_buf[..., 2:4] = (self.target_root_positions[..., 0:2] - self.root_positions[..., 0:2])
+        # self.obs_buf[..., 4] = ((self.root_euler[..., 2]))#  - (math.pi/2))# + (math.pi / (2 * math.pi))
+        self.obs_buf[..., 2] = self.obs_heading_diff # skal den vise om det er positiv eller negativ rotation?
+        self.obs_buf[..., 3] = self.target_dist
+        self.obs_buf[..., 4] = self.progress_buf
         if self.using_camera:  
             self.gym.render_all_camera_sensors(self.sim)
             self.gym.start_access_image_tensors(self.sim)
@@ -535,13 +539,9 @@ class Exomy(VecTask):
             img_tensor= torch.stack((self.cam_tensors), 0)  # combine images
             img_tensor = img_tensor * 100
             camera_data = torch.reshape(img_tensor, (self.num_envs, self.cam_total_pixels))
-            #print(camera_data) # Used to verify camera input in headless mode
             obs_size = self.cam_total_pixels + self.other_obs
             self.obs_buf[..., self.other_obs:obs_size]=camera_data
             self.gym.end_access_image_tensors(self.sim)
-        # Heading
-        # Reset buf
-        # print("Euler: ", self.obs_buf[0,3])
 
         return self.obs_buf
 
@@ -606,15 +606,15 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     pointTurn_reward = torch.where(torch.div(abs(lin_vel), abs(ang_vel)) < 0.201, 1, 0)
 
     # Constants for penalties and rewards:
-    pos_reward = pos_reward * 8.0
+    pos_reward = pos_reward * 10.0
     goal_reward = goal_reward * 50.0
-    vel_penalty = vel_penalty * 0.01
-    heading_reward = heading_reward * 4.0
+    vel_penalty = vel_penalty * 0.05
+    heading_reward = heading_reward * 1.0
     tilt_penalty = tilt_penalty * 1
-    distanceReset_penalty = distanceReset_penalty * 1
+    distanceReset_penalty = distanceReset_penalty * 10
     timeReset_penalty = timeReset_penalty * 20
-    time_penalty = time_penalty * 0.01
-    pointTurn_reward = pointTurn_reward * 0.4
+    time_penalty = time_penalty * 0.005
+    pointTurn_reward = pointTurn_reward * 0.1
     # print("goal: ", pos_reward[0], goal_reward[0], vel_penalty[0], heading_reward[0], tilt_penalty[0], distanceReset_penalty[0], timeReset_penalty[0], time_penalty[0])
 
     # Reward function:
