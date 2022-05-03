@@ -10,7 +10,7 @@ env:
   maxEpisodeLength: 3000
   enableDebugVis: False
 
-  clipObservations: 5.0
+  clipObservations: 3000
   clipActions: 1.0
 
   # set to True if you use camera sensors in the environment
