@@ -178,6 +178,7 @@ class Exomy(VecTask):
         tm_params.transform.p.x = -1.
         tm_params.transform.p.y = -1.
         self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
+        self.terrain_width_total = (terrain_width) + tm_params.transform.p.y - 2.0
         """
 
         #8 terrain types
@@ -198,16 +199,16 @@ class Exomy(VecTask):
         heightfield[num_rows:2*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
         heightfield[2*num_rows:3*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
         heightfield[3*num_rows:4*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
-        heightfield[4*num_rows:5*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.025, max_height=0.075, step=0.1, downsampled_scale=0.5).height_field_raw
-        heightfield[5*num_rows:6*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.05, max_height=0.1, step=0.1, downsampled_scale=0.5).height_field_raw
-        heightfield[6*num_rows:7*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.05, max_height=0.1, step=0.1, downsampled_scale=0.5).height_field_raw
-        heightfield[7*num_rows:8*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.025, max_height=0.075, step=0.1, downsampled_scale=0.5).height_field_raw
-        heightfield[8*num_rows:9*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=2., num_rects=40).height_field_raw
-        heightfield[9*num_rows:10*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=2., num_rects=40).height_field_raw
-        heightfield[10*num_rows:11*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=2., num_rects=40).height_field_raw
-        heightfield[11*num_rows:12*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=2., num_rects=40).height_field_raw
-        heightfield[12*num_rows:13*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=2., num_rects=40).height_field_raw
-        heightfield[13*num_rows:14*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.5, min_size=1., max_size=2., num_rects=40).height_field_raw
+        heightfield[4*num_rows:5*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.015, max_height=0.015, step=0.05, downsampled_scale=0.5).height_field_raw
+        heightfield[5*num_rows:6*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.015, max_height=0.015, step=0.05, downsampled_scale=0.5).height_field_raw
+        heightfield[6*num_rows:7*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.015, max_height=0.015, step=0.05, downsampled_scale=0.5).height_field_raw
+        heightfield[7*num_rows:8*num_rows, :] = random_uniform_terrain(new_sub_terrain(), min_height=-0.015, max_height=0.015, step=0.05, downsampled_scale=0.5).height_field_raw
+        heightfield[8*num_rows:9*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=0.0, min_size=1., max_size=2., num_rects=40).height_field_raw
+        heightfield[9*num_rows:10*num_rows, :] =  discrete_obstacles_terrain(new_sub_terrain(), max_height=0.0, min_size=1., max_size=2., num_rects=40).height_field_raw
+        heightfield[10*num_rows:11*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.0, min_size=1., max_size=2., num_rects=40).height_field_raw
+        heightfield[11*num_rows:12*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.0, min_size=1., max_size=2., num_rects=40).height_field_raw
+        heightfield[12*num_rows:13*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.0, min_size=1., max_size=2., num_rects=40).height_field_raw
+        heightfield[13*num_rows:14*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=0.0, min_size=1., max_size=2., num_rects=40).height_field_raw
 
         # add the terrain as a triangle mesh
         vertices, triangles = convert_heightfield_to_trimesh(heightfield, horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=3.5)
@@ -217,14 +218,14 @@ class Exomy(VecTask):
         tm_params.transform.p.x = -4.
         tm_params.transform.p.y = -4.
         self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
-        self.terrain_width = (num_terains * terrain_width) + tm_params.transform.p.y - 1.0
+        self.terrain_width_total = (num_terains * terrain_width) + tm_params.transform.p.y - 2.0
 
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
         # set target position randomly with x, y in (-2, 2) and z in (1, 2)
         #print("ASDO:JNHSAOJPNHDJNO:HASDJUOIP")
-        alpha = math.pi * torch.rand(num_sets, device=self.device) - 90
-        TargetRadius = 2.5
+        alpha = math.pi * torch.rand(num_sets, device=self.device) - 1.57
+        TargetRadius = 2.0
         TargetCordx = 0
         TargetCordy = 0
         RobotCordx = self.root_positions[env_ids,0]
@@ -233,7 +234,7 @@ class Exomy(VecTask):
         y = TargetRadius * torch.sin(alpha) + TargetCordy
         self.target_root_positions[env_ids, 0] = x
         self.target_root_positions[env_ids, 1] = y
-        self.target_root_positions[env_ids, 2] = 0.5
+        self.target_root_positions[env_ids, 2] = 0.1
         self.marker_positions[env_ids] = self.target_root_positions[env_ids]
         # copter "position" is at the bottom of the legs, so shift the target up so it visually aligns better
         #self.marker_positions[env_ids, 2] += 0.4
@@ -374,53 +375,47 @@ class Exomy(VecTask):
             self.gym.set_rigid_body_color(env0, marker_handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(1, 0, 0))
 
     def reset_idx(self, env_ids):
-        # set rotor speeds
         
         num_resets = len(env_ids)
-
-        target_actor_indices = self.set_targets(env_ids)
-
-
-        # Set orientation of robot as random around Z
-        r = []
         actor_indices = self.all_actor_indices[env_ids, 0].flatten()
-        for i in range(num_resets):
-            r.append(R.from_euler('zyx', [(random.random() * 2 * math.pi), 0, 0], degrees=False).as_quat())
-
-        RQuat = torch.cuda.FloatTensor(r)
-
-        #Rot = torch.rand(num_resets, 3, device=self.device) * 2 * math.pi
-        #Rot[..., 0] = 0
-        #Rot[..., 1] = math.pi
-        #Rot[..., 2] = math.pi
-        #print(Rot[0])
-        #print(Rot)
-        #QuatRot = tgm.angle_axis_to_quaternion(Rot)
         
-        #print(RQuat)
+        # self.root_states[env_ids] = self.initial_root_states[env_ids]
+
+        # Target distance is calculated
+        target_distance = torch.sqrt(torch.square(self.target_root_positions[env_ids,0:2] - self.root_positions[env_ids,0:2]).sum(-1))
+
+        # Rover position is reset with random z-orientation if it hasn't reached the target or if it has traversed the terrain completely
+        dist_buf = torch.where(((target_distance > 0.2) | (self.root_positions[env_ids, 0] >= self.terrain_width_total)), 1, 0)
+        new_reset_env_ids = dist_buf.nonzero(as_tuple=False).squeeze(-1)
+        if len(new_reset_env_ids) > 0:
+            # Set orientation of rover as random around Z
+            r = []
+            actor_indices = self.all_actor_indices[env_ids, 0].flatten()
+            for i in range(num_resets):
+                r.append(R.from_euler('zyx', [(random.random() * 2 * math.pi), 0, 0], degrees=False).as_quat())
+            RQuat = torch.cuda.FloatTensor(r)
+
+            # Reset rover to starting position
+            self.root_states[env_ids, 0] = 0
+            self.root_states[env_ids, 1] = 0
+            self.root_states[env_ids, 2] = 0.2
+
+            #Sets orientation
+            self.root_states[env_ids, 3:7] = RQuat
+
+            self.dof_states = self.initial_dof_states
+            self.gym.set_actor_root_state_tensor_indexed(self.sim,self.root_tensor, gymtorch.unwrap_tensor(actor_indices), num_resets)
+            #print(self.root_states[0])
+            self.dof_positions = 0
         
-        self.root_states[env_ids] = self.initial_root_states[env_ids]
-        self.root_states[env_ids, 0] = 0#torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
-        self.root_states[env_ids, 1] = 0#torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
-        self.root_states[env_ids, 2] = 0.2#torch_rand_float(-0.2, 1.5, (num_resets, 1), self.device).flatten()
+            self.gym.set_dof_state_tensor_indexed(self.sim, gymtorch.unwrap_tensor(self.dof_states), gymtorch.unwrap_tensor(actor_indices), num_resets)
 
-        #print(tgm.quaternion_to_angle_axis(self.root_states[0, 3:7]))
-        #print(self.root_states[0, 3:7])
-
-
-        #Sets orientation
-        self.root_states[env_ids, 3:7] = RQuat
-
-        self.dof_states = self.initial_dof_states
-        self.gym.set_actor_root_state_tensor_indexed(self.sim,self.root_tensor, gymtorch.unwrap_tensor(actor_indices), num_resets)
-        #print(self.root_states[0])
-        self.dof_positions = 0
-        
-        self.gym.set_dof_state_tensor_indexed(self.sim, gymtorch.unwrap_tensor(self.dof_states), gymtorch.unwrap_tensor(actor_indices), num_resets)
+        # Set targets
+        target_actor_indices = self.set_targets(env_ids)
 
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
-        
+
         return torch.unique(torch.cat([target_actor_indices, actor_indices]))
 
         #Used to reset a single environment
@@ -433,29 +428,15 @@ class Exomy(VecTask):
         #set_target_ids = (self.progress_buf % 1000 == 0).nonzero(as_tuple=False).squeeze(-1)
         # if  torch.any(self.progress_buf % 1000 == 0):
             #print(self.marker_positions)
-        
-        #if len(set_target_ids) > 0:
-            #target_actor_indices = self.set_targets(set_target_ids)
-    
-        # Reset actors when it doesnt reach target within max_length_episode or it moves too far away from target
+
+        target_actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
+
+        # Reset actors according to reset_buf 
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
         actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
         if len(reset_env_ids) > 0:
             actor_indices = self.reset_idx(reset_env_ids)
-        
-        # Resets actor when it has travelled through the entire terrain
-        distance_condition = torch.where(self.root_positions[:,0] >= self.terrain_width, 1, 0)
-        reset_dist_ids = distance_condition.nonzero(as_tuple=False).squeeze(-1)
-        if len(reset_dist_ids) > 0:
-            actor_indices = self.reset_idx(reset_dist_ids)
 
-        # Set new targets when an agent reaches current target
-        target_actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
-        self.target_distance = torch.sqrt(torch.square(self.target_root_positions[:,0:2] - self.root_positions[:,0:2]).sum(-1))
-        reset_targets = torch.where(self.target_distance < 0.4, 1, 0) 
-        reset_targets_ids = reset_targets.nonzero(as_tuple=False).squeeze(-1)
-        if len(reset_targets_ids) > 0:
-            target_actor_indices = self.set_targets(reset_targets_ids)
 
         reset_indices = torch.unique(torch.cat([target_actor_indices]))
         if len(reset_indices) > 0:
@@ -519,6 +500,8 @@ class Exomy(VecTask):
         # distance to target
         self.target_dist = torch.sqrt(torch.square(self.target_root_positions[:,0:2] - self.root_positions[:,0:2]).sum(-1))
 
+        # Difference in current target distance compared to previous distance
+        self.target_dist_diff =  self.obs_buf[:,3] - self.target_dist
         #print(self.vec_root_tensor)
         self.compute_observations()
         self.compute_rewards()
@@ -548,7 +531,8 @@ class Exomy(VecTask):
     def compute_rewards(self):
         # Determine rewards and which environments to reset
         self.rew_buf[:], self.reset_buf[:] = compute_exomy_reward(self.root_euler,
-            self.reset_buf, self.progress_buf, self.max_episode_length, self.motor_velocities, self.heading_diff, self.target_dist, self.lin_vel, self.ang_vel)        
+            self.reset_buf, self.progress_buf, self.max_episode_length, self.motor_velocities, 
+            self.heading_diff, self.target_dist, self.target_dist_diff, self.root_positions, self.terrain_width_total, self.lin_vel, self.ang_vel)        
     
     def cam_setup(self, width, height):
        # Camera properties
@@ -568,14 +552,15 @@ class Exomy(VecTask):
 
 
 @torch.jit.script
-def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length, motor_velocities, heading_diff, target_dist, lin_vel, ang_vel):
-    # type: (Tensor, Tensor, Tensor, float, Tensor, Tensor, Tensor, Tensor, Tensor) -> Tuple[Tensor, Tensor]
+def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length, motor_velocities, 
+    heading_diff, target_dist, target_dist_diff, root_positions, terrain_width_total, lin_vel, ang_vel):
+    # type: (Tensor, Tensor, Tensor, float, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor, Tensor) -> Tuple[Tensor, Tensor]
 
     # Heading penalty. Penalty for pointing away from target. Penalty increases with target_dist (heading close to target is not as relevant)
     heading_reward = 1.0 / (1.0 + heading_diff * heading_diff * target_dist)
 
     # position reward
-    pos_reward = 1.0 / (0.2 + target_dist * target_dist)
+    pos_reward = 1.0 / (1.0 + target_dist * target_dist)
     
     # Reversing penalty: Den kører baglaens: reward = -(velocity1 + velocity2) * 0.5
     velocityML = motor_velocities[:,2]
@@ -584,7 +569,7 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     vel_penalty = ((velocityML + velocityMR) * velocityCondition)
 
     # Goal reward for at komme indenfor xx meter af current target
-    goal_reward = torch.where(target_dist < 0.4, 1, 0)
+    goal_reward = torch.where(target_dist < 0.2, 1, 0)
     
     # Penalty for moving too far away from target
     distanceReset_penalty = torch.where(target_dist > 4, 1, 0)
@@ -603,28 +588,32 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     time_penalty = progress_buf
 
     # Point turn reward: reward for turning on the spot
-    pointTurn_reward = torch.where(torch.div(abs(lin_vel), abs(ang_vel)) < 0.201, 1, 0)
+    #pointTurn_reward = torch.where(torch.div(abs(lin_vel), abs(ang_vel)) < 0.201, 1, 0)
 
     # Constants for penalties and rewards:
-    pos_reward = pos_reward * 10.0
-    goal_reward = goal_reward * 50.0
-    vel_penalty = vel_penalty * 0.05
-    heading_reward = heading_reward * 1.0
-    tilt_penalty = tilt_penalty * 1
-    distanceReset_penalty = distanceReset_penalty * 10
-    timeReset_penalty = timeReset_penalty * 20
-    time_penalty = time_penalty * 0.005
-    pointTurn_reward = pointTurn_reward * 0.1
+    pos_reward = pos_reward * 7.0
+    target_dist_diff = torch.clamp(target_dist_diff * 500, -10, 10)
+    goal_reward = goal_reward * 40.0
+    vel_penalty = torch.clamp(vel_penalty * 0.05, -1.0, 0.0)
+    heading_reward = heading_reward * 4.0
+    # tilt_penalty = tilt_penalty * 1
+    distanceReset_penalty = distanceReset_penalty * 40
+    # timeReset_penalty = timeReset_penalty * 20
+    time_penalty = time_penalty * 0.015
+    #pointTurn_reward = pointTurn_reward * 0.1
     # print("goal: ", pos_reward[0], goal_reward[0], vel_penalty[0], heading_reward[0], tilt_penalty[0], distanceReset_penalty[0], timeReset_penalty[0], time_penalty[0])
 
     # Reward function:
-    reward = pos_reward + heading_reward + goal_reward + pointTurn_reward + vel_penalty - distanceReset_penalty - tilt_penalty - timeReset_penalty - time_penalty
+    # reward = pos_reward + heading_reward + goal_reward + vel_penalty - distanceReset_penalty - time_penalty# + pointTurn_reward - timeReset_penalty - tilt_penalty 
+    reward = target_dist_diff + goal_reward + heading_reward + vel_penalty - distanceReset_penalty - time_penalty
     #print((torch.max(reward), torch.argmax(reward)))
 
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
-    # resets due to episode length and target distance
+    # resets due to episode_length, too far from target, target reached, end of terrain
     reset = torch.where(progress_buf >= max_episode_length - 1, ones, die)
-    reset = torch.where(target_dist >= 4, ones, reset)
+    reset = torch.where(target_dist >= 6, ones, reset)
+    reset = torch.where(target_dist < 0.2, ones, reset)
+    reset = torch.where(root_positions[:,0] >= terrain_width_total, ones, reset)
     
     return reward, reset
