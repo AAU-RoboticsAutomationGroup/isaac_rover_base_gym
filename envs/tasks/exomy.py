@@ -1,5 +1,6 @@
 import math
 import time
+from tokenize import triple_quoted
 from turtle import pos
 
 from cv2 import StereoBM_PREFILTER_XSOBEL
@@ -230,7 +231,7 @@ class Exomy(VecTask):
         # Flat + 7 discrete
         
         num_terains = 14
-        terrain_width = 5.
+        terrain_width = 2.
         terrain_length = 200.
         horizontal_scale = 0.25  # [m]
         vertical_scale = 0.005  # [m]
@@ -242,27 +243,27 @@ class Exomy(VecTask):
         def new_sub_terrain(): return SubTerrain(width=num_rows, length=num_cols, vertical_scale=vertical_scale, horizontal_scale=horizontal_scale)
 
 
-        heightfield[0:num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
-        heightfield[num_rows:2*num_rows, :] = wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
-        heightfield[2*num_rows:3*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=120).height_field_raw
-        heightfield[3*num_rows:4*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=120).height_field_raw
-        heightfield[4*num_rows:5*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=120).height_field_raw
-        heightfield[5*num_rows:6*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=120).height_field_raw
-        heightfield[6*num_rows:7*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=120).height_field_raw
-        heightfield[7*num_rows:8*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=120).height_field_raw
-        heightfield[8*num_rows:9*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=120).height_field_raw
-        heightfield[9*num_rows:10*num_rows, :] =  discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=120).height_field_raw
-        heightfield[10*num_rows:11*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=120).height_field_raw
-        heightfield[11*num_rows:12*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=120).height_field_raw
-        heightfield[12*num_rows:13*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=120).height_field_raw
-        heightfield[13*num_rows:14*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=120).height_field_raw
+        heightfield[0:num_rows, :] =              wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
+        heightfield[num_rows:2*num_rows, :] =     wave_terrain(new_sub_terrain(), num_waves=0., amplitude=0.).height_field_raw
+        heightfield[2*num_rows:3*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=80).height_field_raw
+        heightfield[3*num_rows:4*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=80).height_field_raw
+        heightfield[4*num_rows:5*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=80).height_field_raw
+        heightfield[5*num_rows:6*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=80).height_field_raw
+        heightfield[6*num_rows:7*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=80).height_field_raw
+        heightfield[7*num_rows:8*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=80).height_field_raw
+        heightfield[8*num_rows:9*num_rows, :] =   discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=80).height_field_raw
+        heightfield[9*num_rows:10*num_rows, :] =  discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=80).height_field_raw
+        heightfield[10*num_rows:11*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=80).height_field_raw
+        heightfield[11*num_rows:12*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=80).height_field_raw
+        heightfield[12*num_rows:13*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=80).height_field_raw
+        heightfield[13*num_rows:14*num_rows, :] = discrete_obstacles_terrain(new_sub_terrain(), max_height=1.0, min_size=0.4, max_size=0.6, num_rects=80).height_field_raw
 
         # add the terrain as a triangle mesh
         vertices, triangles = convert_heightfield_to_trimesh(abs(heightfield), horizontal_scale=horizontal_scale, vertical_scale=vertical_scale, slope_threshold=3.5)
         tm_params = gymapi.TriangleMeshParams()
         tm_params.nb_vertices = vertices.shape[0]
         tm_params.nb_triangles = triangles.shape[0]
-        tm_params.transform.p.x = -4.
+        tm_params.transform.p.x = -3.
         tm_params.transform.p.y = -4.
         self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
         self.terrain_width_total = (num_terains * terrain_width) + tm_params.transform.p.y - 2.0
@@ -294,8 +295,8 @@ class Exomy(VecTask):
 
     def _create_envs(self,num_envs,spacing, num_per_row):
        # define plane on which environments are initialized
-        lower = gymapi.Vec3(0.01*-spacing, -spacing, 0.0)
-        upper = gymapi.Vec3(0.01 * spacing, spacing, spacing)
+        lower = gymapi.Vec3(0.0 * -spacing, -spacing, 0.0)
+        upper = gymapi.Vec3(0.0 * spacing, spacing, spacing)
 
         asset_root = "../assets"
         exomy_asset_file = "urdf/exomy_modelv2/urdf/exomy_model.urdf"
@@ -673,7 +674,7 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     distanceReset_penalty = torch.where(target_dist > 5, 1, 0)
 
     # Penalty for tilting
-    penaltyAngle = 0.3 #radians # absolut
+    penaltyAngle = 0.55 #radians # absolut
     tiltFlag = torch.where((root_euler[:,0] > penaltyAngle) | (root_euler[:,1] > penaltyAngle), 1, 0)
     tiltX = torch.where((tiltFlag == 1) & (root_euler[:,0] > root_euler[:,1]), 1, 0)
     tiltY = torch.where((tiltFlag == 1) & (root_euler[:,0] < root_euler[:,1]), 1, 0)
@@ -694,21 +695,22 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     # Constants for penalties and rewards:
     pos_reward = pos_reward * pos_reward * 10.0
     # target_dist_diff = torch.clamp(target_dist_diff* target_dist_diff_condition * 600, -10, 10)
-    goal_reward = goal_reward * 50.0
+    goal_reward = goal_reward * 100.0
     vel_penalty = torch.clamp(vel_penalty * 0.1, -4.0, 0.0)
     heading_reward = heading_reward * 6
-    #tilt_penalty = tilt_penalty * 1
+    # tilt_penalty = tilt_penalty * 10
     distanceReset_penalty = distanceReset_penalty * 50
+    fall_penalty = torch.where(root_positions[:,2] < -1.0, 100, 0)
     # timeReset_penalty = timeReset_penalty * 20
     time_penalty = torch.clamp(time_penalty * 0.02, 20, 0)
     camera_penalty = camera_penalty * 1.0
     #pointTurn_reward = pointTurn_reward * 0.1
     # print("goal: ", pos_reward[0], goal_reward[0], vel_penalty[0], heading_reward[0], tilt_penalty[0], distanceReset_penalty[0], timeReset_penalty[0], time_penalty[0])
-    # print(camera_penalty[0])
+    # print(tilt_penalty[0:8])
 
     # Reward function:
     # reward = pos_reward + heading_reward + goal_reward + vel_penalty - distanceReset_penalty - time_penalty# + pointTurn_reward - timeReset_penalty - tilt_penalty 
-    reward = pos_reward + goal_reward + heading_reward + vel_penalty - distanceReset_penalty - time_penalty - camera_penalty# - tilt_penalty
+    reward = pos_reward + goal_reward + heading_reward + vel_penalty - distanceReset_penalty - time_penalty - camera_penalty - fall_penalty# - tilt_penalty
     #print((torch.max(reward), torch.argmax(reward)))
 
     ones = torch.ones_like(reset_buf)
@@ -720,5 +722,6 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     reset = torch.where(root_positions[:,0] >= terrain_width_total, ones, reset)
     reset = torch.where(root_positions[:,2] < -1.0, ones, reset)
     reset = torch.where(camera_penalty > 20, ones, reset)
+    reset = torch.where(tiltFlag == 1, ones, reset)
     
     return reward, reset
