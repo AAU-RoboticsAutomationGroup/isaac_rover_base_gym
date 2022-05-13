@@ -27,22 +27,14 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from tasks.exomy import Exomy
-from tasks.exomy_terrain import Exomy_terrain
-from tasks.exomy_reward import Exomy_reward
-from tasks.exomy_camera import Exomy_camera
-from tasks.exomy_heading import Exomy_heading
-from tasks.exomy_spawnPoints import Exomy_spawnPoints
-from tasks.exomy_resets import Exomy_resets
+from tasks.exomy_withCameraPenalty import Exomy_withCameraPenalty
+from tasks.exomy_cameraSetup import Exomy_cameraSetup
 from tasks.exomy_parameterTuning import Exomy_parameterTuning
 
 # Mappings from strings to environments
 isaacgym_task_map = {
     "Exomy": Exomy,
-    "Exomy_terrain": Exomy_terrain,
-    "Exomy_reward": Exomy_reward,
-    "Exomy_camera": Exomy_camera,
-    "Exomy_heading": Exomy_heading,
-    "Exomy_spawnPoints": Exomy_spawnPoints,
-    "Exomy_resets": Exomy_resets,
+    "Exomy_camera": Exomy_withCameraPenalty,
+    "Exomy_cameraSetup": Exomy_cameraSetup,
     "Exomy_parameterTuning": Exomy_parameterTuning
 }
