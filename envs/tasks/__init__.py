@@ -34,7 +34,7 @@ from tasks.exomy_parameterTuning import Exomy_parameterTuning
 # Mappings from strings to environments
 isaacgym_task_map = {
     "Exomy": Exomy,
-    "Exomy_camera": Exomy_withCameraPenalty,
+    "Exomy_withCameraPenalty": Exomy_withCameraPenalty,
     "Exomy_cameraSetup": Exomy_cameraSetup,
-    "Exomy_parameterTuning": Exomy_parameterTuning
+    "Exomy_parameterTuning": Exomy_parameterTuning,
 }
