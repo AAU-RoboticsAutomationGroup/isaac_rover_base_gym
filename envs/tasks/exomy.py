@@ -189,7 +189,7 @@ class Exomy(VecTask):
         """
 
         #8 terrain types
-        """
+        
         num_terains = 14
         terrain_width = 5.
         terrain_length = 200.
@@ -227,9 +227,9 @@ class Exomy(VecTask):
         tm_params.transform.p.y = -4.
         self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
         self.terrain_width_total = (num_terains * terrain_width) + tm_params.transform.p.y - 2.0
-        """
-        # Flat + 7 discrete
         
+        # Flat + 7 discrete
+        """
         num_terains = 14
         terrain_width = 2.
         terrain_length = 200.
@@ -267,7 +267,7 @@ class Exomy(VecTask):
         tm_params.transform.p.y = -4.
         self.gym.add_triangle_mesh(self.sim, vertices.flatten(), triangles.flatten(), tm_params)
         self.terrain_width_total = (num_terains * terrain_width) + tm_params.transform.p.y - 2.0
-        
+        """
         
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
@@ -598,7 +598,9 @@ class Exomy(VecTask):
         self.camera_penalty = cam_1_penalty * 2 + cam_3_penalty * 5 + cam_4_penalty * 15
 
         # Compute observations and rewards:
+        # print("Actions: ", self.lin_vel[0],self.ang_vel[0])
         self.compute_observations()
+        # print("Observations: ", self.obs_buf[0])
         self.compute_rewards()
 
     def compute_observations(self):
@@ -668,7 +670,7 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     vel_penalty = ((velocityML + velocityMR) * velocityCondition)
 
     # Goal reward for at komme indenfor xx meter af current target
-    goal_reward = torch.where(target_dist < 0.4, 1, 0)
+    goal_reward = torch.where(target_dist < 0.1, 1, 0)
     
     # Penalty for moving too far away from target
     distanceReset_penalty = torch.where(target_dist > 5, 1, 0)
@@ -700,9 +702,9 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     heading_reward = heading_reward * 6
     # tilt_penalty = tilt_penalty * 10
     distanceReset_penalty = distanceReset_penalty * 50
-    fall_penalty = torch.where(root_positions[:,2] < -1.0, 100, 0)
+    # fall_penalty = torch.where(root_positions[:,2] < -1.0, 100, 0)
     # timeReset_penalty = timeReset_penalty * 20
-    time_penalty = torch.clamp(time_penalty * 0.02, 20, 0)
+    time_penalty = torch.clamp(time_penalty * 0.03, 20, 0)
     camera_penalty = camera_penalty * 1.0
     #pointTurn_reward = pointTurn_reward * 0.1
     # print("goal: ", pos_reward[0], goal_reward[0], vel_penalty[0], heading_reward[0], tilt_penalty[0], distanceReset_penalty[0], timeReset_penalty[0], time_penalty[0])
@@ -710,7 +712,7 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
 
     # Reward function:
     # reward = pos_reward + heading_reward + goal_reward + vel_penalty - distanceReset_penalty - time_penalty# + pointTurn_reward - timeReset_penalty - tilt_penalty 
-    reward = pos_reward + goal_reward + heading_reward + vel_penalty - distanceReset_penalty - time_penalty - camera_penalty - fall_penalty# - tilt_penalty
+    reward = pos_reward + goal_reward + heading_reward + vel_penalty - distanceReset_penalty - time_penalty# - fall_penalty# - tilt_penalty
     #print((torch.max(reward), torch.argmax(reward)))
 
     ones = torch.ones_like(reset_buf)
@@ -718,10 +720,10 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     # resets due to episode_length, too far from target, target reached, end of terrain
     reset = torch.where(progress_buf >= max_episode_length - 1, ones, die)
     reset = torch.where(target_dist >= 5, ones, reset)
-    reset = torch.where(target_dist < 0.4, ones, reset)
+    reset = torch.where(target_dist < 0.1, ones, reset)
     reset = torch.where(root_positions[:,0] >= terrain_width_total, ones, reset)
     reset = torch.where(root_positions[:,2] < -1.0, ones, reset)
-    reset = torch.where(camera_penalty > 20, ones, reset)
+    # reset = torch.where(camera_penalty > 20, ones, reset)
     reset = torch.where(tiltFlag == 1, ones, reset)
     
     return reward, reset
