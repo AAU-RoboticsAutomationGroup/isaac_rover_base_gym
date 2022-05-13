@@ -31,7 +31,7 @@ from isaacgym.terrain_utils import *
     # Spawn new points
 
 
-class Exomy(VecTask):
+class Exomy_distDiff(VecTask):
 
     def __init__(self, cfg, sim_device, graphics_device_id, headless):
 

@@ -1,5 +1,5 @@
 # used to create the object
-name: Exomy
+name: Exomy_parameterTuning
 
 physics_engine: ${..physics_engine}
 
