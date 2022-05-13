@@ -518,8 +518,9 @@ class Exomy_parameterTuning(VecTask):
         #print(torch.max(self.progress_buf))
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
-        root_quat = R.from_quat(self.root_quats.cpu())
-        self.root_euler = torch.from_numpy(root_quat.as_euler('xyz')).to(self.device)
+        # root_quat = R.from_quat(self.root_quats.cpu())
+        # self.root_euler = torch.from_numpy(root_quat.as_euler('xyz')).to(self.device)
+        self.root_euler = self.tensor_quat_to_eul()
         #self.root_euler = tgm.quaternion_to_angle_axis(self.root_quats)
         time = torch.tensor(self.dt)
 
@@ -590,6 +591,32 @@ class Exomy_parameterTuning(VecTask):
         self.camera_handles = []
         self.cam_tensors = []
         print(" ... Camera init done ... ")
+
+    def tensor_quat_to_eul(self):
+        # https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles
+        # Quaternions format: X, Y, Z, W
+        # Quat index:         0, 1, 2, 3
+        quats = self.root_quats
+        euler_angles = torch.zeros([len(quats), 3], device='cuda:0')
+        ones = torch.ones([len(quats)], device='cuda:0')
+        zeros = torch.zeros([len(quats)], device='cuda:0')
+
+        #Roll
+        sinr_cosp = 2 * (quats[:,3] * quats[:,0] + quats[:,1] * quats[:,2])
+        cosr_cosp = ones - (2 * (quats[:,0] * quats[:,0] + quats[:,1] * quats[:,1]))
+        euler_angles[:,0] = torch.atan2(sinr_cosp, cosr_cosp)
+
+        #Pitch
+        sinp = 2 * (quats[:,3]*quats[:,1] - quats[:,2] * quats[:,0])
+        condition = (torch.sign(sinp - ones) >= zeros)
+        euler_angles[:,1] = torch.where(condition, torch.copysign((ones*torch.pi)/2, sinp), torch.asin(sinp)) 
+
+        #Yaw    
+        siny_cosp = 2 * (quats[:,3] * quats[:,2] + quats[:,0] * quats[:,1])
+        cosy_cosp = ones - (2 * (quats[:,1] * quats[:,1] + quats[:,2] * quats[:,2]))
+        euler_angles[:,2] = torch.atan2(siny_cosp, cosy_cosp)
+
+        return euler_angles
 
 
 @torch.jit.script
