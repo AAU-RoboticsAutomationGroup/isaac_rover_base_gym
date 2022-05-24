@@ -26,15 +26,13 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from tasks.exomy import Exomy
 from tasks.exomy_withCameraPenalty import Exomy_withCameraPenalty
-from tasks.exomy_cameraSetup import Exomy_cameraSetup
 from tasks.exomy_parameterTuning import Exomy_parameterTuning
+from tasks.exomy_simTest import Exomy_simTest
 
 # Mappings from strings to environments
 isaacgym_task_map = {
-    "Exomy": Exomy,
     "Exomy_withCameraPenalty": Exomy_withCameraPenalty,
-    "Exomy_cameraSetup": Exomy_cameraSetup,
     "Exomy_parameterTuning": Exomy_parameterTuning,
+    "Exomy_simTest": Exomy_simTest,
 }
