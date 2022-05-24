@@ -460,7 +460,7 @@ class Exomy_withCameraPenalty(VecTask):
         target_distance = torch.sqrt(torch.square(self.target_root_positions[env_ids,0:2] - self.root_positions[env_ids,0:2]).sum(-1))
 
         # Rover position is reset with random z-orientation if it hasn't reached the target or if it has traversed the terrain completely
-        dist_buf = torch.where(((target_distance > 0.4) | (self.root_positions[env_ids, 0] >= self.terrain_width_total) | (self.root_positions[env_ids, 2] < -1.0) | (self.camera_penalty[env_ids] > 20.0)), 1, 0)
+        dist_buf = torch.where(((target_distance > 0.4) | (self.root_positions[env_ids, 0] >= self.terrain_width_total) | (self.root_positions[env_ids, 2] < -1.0) | (self.camera_penalty[env_ids] > 300.0)), 1, 0)
         new_reset_env_ids = dist_buf.nonzero(as_tuple=False).squeeze(-1)
         if len(new_reset_env_ids) > 0:
             # Set orientation of rover as random around Z
@@ -595,7 +595,7 @@ class Exomy_withCameraPenalty(VecTask):
         cam_1 = torch.where(((cam_buf_min_1[0] < 0.8) | (cam_buf_min_1[0] > 1.5)), 1, 0)
         cam_1_penalty = 1 / (1 + cam_buf_min_1[0] * cam_buf_min_1[0]) * cam_1
 
-        self.camera_penalty = cam_1_penalty * 2 + cam_3_penalty * 3 + cam_4_penalty * 10
+        self.camera_penalty = cam_1_penalty * 1 + cam_3_penalty * 2 + cam_4_penalty * 1000
 
         # Compute observations and rewards:
         self.compute_observations()
@@ -695,14 +695,14 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     # Constants for penalties and rewards:
     pos_reward = pos_reward * pos_reward * 10.0
     # target_dist_diff = torch.clamp(target_dist_diff* target_dist_diff_condition * 600, -10, 10)
-    goal_reward = goal_reward * 50.0
+    goal_reward = goal_reward * 200.0
     vel_penalty = torch.clamp(vel_penalty * 0.4, -16.0, 0.0)
     heading_reward = heading_reward * 6
     # tilt_penalty = tilt_penalty * 10
     distanceReset_penalty = distanceReset_penalty * 50
     fall_penalty = torch.where(root_positions[:,2] < -1.0, 50, 0)
     # timeReset_penalty = timeReset_penalty * 20
-    time_penalty = torch.clamp(time_penalty * 0.02, 20, 0)
+    time_penalty = torch.clamp(time_penalty * 0.04, 0, 20)
     camera_penalty = camera_penalty * 1.0
     #pointTurn_reward = pointTurn_reward * 0.1
     # print("goal: ", pos_reward[0], goal_reward[0], vel_penalty[0], heading_reward[0], tilt_penalty[0], distanceReset_penalty[0], timeReset_penalty[0], time_penalty[0])
@@ -721,7 +721,7 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     reset = torch.where(target_dist < 0.4, ones, reset)
     reset = torch.where(root_positions[:,0] >= terrain_width_total, ones, reset)
     reset = torch.where(root_positions[:,2] < -1.0, ones, reset)
-    reset = torch.where(camera_penalty > 13, ones, reset)
+    reset = torch.where(camera_penalty > 300, ones, reset)
     reset = torch.where(tiltFlag == 1, ones, reset)
     
     return reward, reset
