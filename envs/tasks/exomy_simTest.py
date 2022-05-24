@@ -18,25 +18,11 @@ from utils.kinematicsUpdated import Ackermann
 from tasks.camera import camera
 from isaacgym.terrain_utils import *
 
-# test
-##################################################
-# Implemented so far
-##################################################
-# Exomy_reward - 11/04 kl. 10:35 
-    # Pos_reward
-    # Vel_reward
-# Exomy_terrain - 11/04 kl. 10:35
-    # 1 uniform terrain instead of 8 different
-# Exomy_heading - 17/04 kl. 23
-    # Spawn new points
-
-
 class Exomy_simTest(VecTask):
 
     def __init__(self, cfg, sim_device, graphics_device_id, headless):
 
         self.cfg = cfg
-        #self.Kinematics = Rover()
         self.max_episode_length = self.cfg["env"]["maxEpisodeLength"]
 
         self.cam_width = 10
@@ -66,7 +52,6 @@ class Exomy_simTest(VecTask):
         # Convert buffer to vector, one is created for the robot and for the marker.
         vec_root_tensor = gymtorch.wrap_tensor(self.root_tensor).view(self.num_envs, 2, 13)
         vec_dof_tensor = gymtorch.wrap_tensor(self.dof_state_tensor).view(self.num_envs, dofs_per_env, 2)
-        #print(vec_dof_tensor)
         # Position vector for robot
         self.root_states = vec_root_tensor[:, 0, :]
         self.root_positions = self.root_states[:, 0:3]
@@ -76,21 +61,13 @@ class Exomy_simTest(VecTask):
         self.root_linvels = self.root_states[:, 7:10]
         # Angular Velocity of robot
         self.root_angvels = self.root_states[:, 10:13]
-        #print(self.root_states[0,3])
 
         self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
         self.target_root_positions[:, 2] = 0
 
-        #print(self.target_root_positions)
-
         # Marker position
         self.marker_states = vec_root_tensor[:, 1, :]
         self.marker_positions = self.marker_states[:, 0:3]
-
-
-        # self.dof_states = vec_dof_tensor
-        # self.dof_positions = vec_dof_tensor[..., 0]
-        # self.dof_velocities = vec_dof_tensor[..., 1]
 
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
         self.dof_states = gymtorch.wrap_tensor(dof_state_tensor)
@@ -118,7 +95,6 @@ class Exomy_simTest(VecTask):
         # implement sim set up and environment creation here
         #    - set up-axis
         self.sim_params.up_axis = gymapi.UP_AXIS_Z
-
 
         #    - set up gravity
         self.sim_params.gravity.x = 0
@@ -264,21 +240,18 @@ class Exomy_simTest(VecTask):
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
         # set target position randomly with x, y in (-2, 2) and z in (1, 2)
-        #print("ASDO:JNHSAOJPNHDJNO:HASDJUOIP")
         alpha = torch.tensor([2 * torch.pi], device=self.device) # math.pi * torch.rand(num_sets, device=self.device) - 1.57
         TargetRadius = 2.0
         TargetCordx = 0
         TargetCordy = 0
         RobotCordx = self.root_positions[env_ids,0]
-        #print("Updating targets")
         x = TargetRadius * torch.cos(alpha) + TargetCordx + abs(RobotCordx)
         y = TargetRadius * torch.sin(alpha) + TargetCordy
         self.target_root_positions[env_ids, 0] = x
         self.target_root_positions[env_ids, 1] = y
         self.target_root_positions[env_ids, 2] = 0.7
         self.marker_positions[env_ids] = self.target_root_positions[env_ids]
-        # copter "position" is at the bottom of the legs, so shift the target up so it visually aligns better
-        #self.marker_positions[env_ids, 2] += 0.4
+
         actor_indices = self.all_actor_indices[env_ids, 1].flatten()
         self.gym.set_actor_root_state_tensor_indexed(self.sim,self.root_tensor, gymtorch.unwrap_tensor(actor_indices), num_sets)
 
@@ -286,20 +259,12 @@ class Exomy_simTest(VecTask):
 
 
     def _create_envs(self,num_envs,spacing, num_per_row):
-       # define plane on which environments are initialized
+        # define plane on which environments are initialized
         lower = gymapi.Vec3(0.01*-spacing, -spacing, 0.0)
         upper = gymapi.Vec3(0.01 * spacing, spacing, spacing)
 
         asset_root = "../assets"
         exomy_asset_file = "urdf/exomy_modelv2/urdf/exomy_model.urdf"
-
-        # if "asset" in self.cfg["env"]:
-        #     asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.cfg["env"]["asset"].get("assetRoot", asset_root))
-        #     asset_file = self.cfg["env"]["asset"].get("assetFileName", asset_file)
-
-        # asset_path = os.path.join(asset_root, asset_file)
-        # asset_root = os.path.dirname(asset_path)
-        # asset_file = os.path.basename(asset_path)
 
         asset_options = gymapi.AssetOptions()
         asset_options.fix_base_link = False
@@ -311,9 +276,8 @@ class Exomy_simTest(VecTask):
         print("Loading asset '%s' from '%s'" % (exomy_asset_file, asset_root))
         exomy_asset = self.gym.load_asset(self.sim, asset_root, exomy_asset_file, asset_options)
         self.num_dof = self.gym.get_asset_dof_count(exomy_asset)
-        #print(self.num_dof)
+        
         #################################################
-        # get joint limits and ranges for Franka
         exomy_dof_props = self.gym.get_asset_dof_properties(exomy_asset)
         exomy_lower_limits = exomy_dof_props["lower"]
         exomy_upper_limits = exomy_dof_props["upper"]
@@ -358,7 +322,6 @@ class Exomy_simTest(VecTask):
         self.envs = []
 
         #Create marker
-
         default_pose = gymapi.Transform()
         default_pose.p.z = 0.0
         default_pose.p.x = 0.1        
@@ -367,14 +330,12 @@ class Exomy_simTest(VecTask):
         marker_asset = self.gym.create_sphere(self.sim, 0.1, marker_options)
 
         self.cam_tensors = []
-        #self.cameras = camera(self.cam_width,self.cam_height) #ERSTATTES MED:
         self.cam_setup(self.cam_width,self.cam_height)
 
         for i in range(num_envs):
             # Create environment
             env0 = self.gym.create_env(self.sim, lower, upper, num_per_row)
             self.envs.append(env0)
-
 
             exomy0_handle = self.gym.create_actor(
                 env0,  # Environment Handle
@@ -386,15 +347,8 @@ class Exomy_simTest(VecTask):
             )
             self.exomy_handles.append(exomy0_handle)
 
-
-
-            # Configure DOF properties
-            # Set initial DOF states
-            # gym.set_actor_dof_states(env0, exomy0_handle, default_dof_state, gymapi.STATE_ALL)
             # Set DOF control properties
             self.gym.set_actor_dof_properties(env0, exomy0_handle, exomy_dof_props)
-            #print(self.gym.get_actor_dof_properties((env0, exomy0_handle))
-            #self.cameras.add_camera(env0, self.gym, exomy0_handle)
 
             # Create camera sensor
             self.camera_handle = self.gym.create_camera_sensor(env0, self.camera_props)
@@ -416,8 +370,7 @@ class Exomy_simTest(VecTask):
             self.gym.set_rigid_body_color(env0, marker_handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(1, 0, 0))
 
     def reset_idx(self, env_ids):
-        # set rotor speeds
-        
+        # Reset function when individual environments need to be reset:
         num_resets = len(env_ids)
 
         target_actor_indices = self.set_targets(env_ids)
@@ -431,16 +384,15 @@ class Exomy_simTest(VecTask):
         RQuat = torch.cuda.FloatTensor(r)
 
         self.root_states[env_ids] = self.initial_root_states[env_ids]
-        self.root_states[env_ids, 0] = 0#torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
-        self.root_states[env_ids, 1] = 0#torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
-        self.root_states[env_ids, 2] = 0.2#torch_rand_float(-0.2, 1.5, (num_resets, 1), self.device).flatten()
+        self.root_states[env_ids, 0] = 0   #torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
+        self.root_states[env_ids, 1] = 0   #torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
+        self.root_states[env_ids, 2] = 0.2 #torch_rand_float(-0.2, 1.5, (num_resets, 1), self.device).flatten()
 
         #Sets orientation
         self.root_states[env_ids, 3:7] = RQuat
 
         self.dof_states = self.initial_dof_states
         self.gym.set_actor_root_state_tensor_indexed(self.sim,self.root_tensor, gymtorch.unwrap_tensor(actor_indices), num_resets)
-        #print(self.root_states[0])
         self.dof_positions = 0
         
         self.gym.set_dof_state_tensor_indexed(self.sim, gymtorch.unwrap_tensor(self.dof_states), gymtorch.unwrap_tensor(actor_indices), num_resets)
@@ -450,16 +402,8 @@ class Exomy_simTest(VecTask):
         
         return torch.unique(torch.cat([target_actor_indices, actor_indices]))
 
-        #Used to reset a single environment
-
-
-
-
     def pre_physics_step(self, actions):
-        # 
-        #set_target_ids = (self.progress_buf % 1000 == 0).nonzero(as_tuple=False).squeeze(-1)
-        # if  torch.any(self.progress_buf % 1000 == 0):
-            #print(self.marker_positions)
+        # Pre physics step:
 
         target_actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
 
@@ -479,8 +423,6 @@ class Exomy_simTest(VecTask):
         _actions = actions.to(self.device)
 
         # get steering_angles and motor_velocities using kinematicsUpdated (ackermann)
-        # _actions[:,0] = 0.0
-        # _actions[:,1] = 0.2
         steering_angles, motor_velocities = Ackermann(_actions[:,0], _actions[:,1])
         # set actions_tensor for the rover:
         actions_tensor[1::15]=(steering_angles[:,3])   #1  #ML POS
@@ -507,17 +449,15 @@ class Exomy_simTest(VecTask):
     def post_physics_step(self):
         # implement post-physics simulation code here
         #    - e.g. compute reward, compute observations
+        
+        # Add one step to the progress buff for each step in simulation:
         self.progress_buf += 1
-        #self.cameras.render_cameras(self.gym, self.sim)
-        #print(torch.max(self.progress_buf))
+
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
-        # root_quat = R.from_quat(self.root_quats.cpu())
-        # self.root_euler = torch.from_numpy(root_quat.as_euler('xyz')).to(self.device)
         self.root_euler = self.tensor_quat_to_eul()
-        #self.root_euler = tgm.quaternion_to_angle_axis(self.root_quats)
-        time = torch.tensor(self.dt)
 
+        time = torch.tensor(self.dt)
 
         # Target vector relative to the rover
         target_vector = self.target_root_positions[..., 0:2] - self.root_positions[..., 0:2]
@@ -543,17 +483,15 @@ class Exomy_simTest(VecTask):
         self.compute_rewards()
 
     def compute_observations(self):
+        # Normalised observations
         self.obs_buf[..., 0] = self.lin_vel
         self.obs_buf[..., 1] = self.ang_vel
-        # self.obs_buf[..., 2:4] = (self.target_root_positions[..., 0:2] - self.root_positions[..., 0:2])
-        # self.obs_buf[..., 4] = ((self.root_euler[..., 2]))#  - (math.pi/2))# + (math.pi / (2 * math.pi))
-        self.obs_buf[..., 2] = self.obs_heading_diff / 3.14 # skal den vise om det er positiv eller negativ rotation?
+        self.obs_buf[..., 2] = self.obs_heading_diff / 3.14
         self.obs_buf[..., 3] = self.target_dist / 5
         self.obs_buf[..., 4] = self.progress_buf / 3000
         if self.using_camera:  
             self.gym.render_all_camera_sensors(self.sim)
             self.gym.start_access_image_tensors(self.sim)
-
 
             img_tensor= torch.stack((self.cam_tensors), 0)  # combine images
             img_tensor = img_tensor * 100
