@@ -44,10 +44,12 @@ import onnx
 import onnxruntime as ort
 from rl_games.common import env_configurations, vecenv
 from rl_games.torch_runner import Runner
+import rl_games.torch_runner 
 from utils import flatten
 import torch
 import numpy
 import yaml
+
 
 
 ## OmegaConf & Hydra Config
@@ -109,9 +111,10 @@ def launch_rlg_hydra(cfg: DictConfig):
     os.makedirs(experiment_dir, exist_ok=True)
     with open(os.path.join(experiment_dir, 'config.yaml'), 'w') as f:
         f.write(OmegaConf.to_yaml(cfg))
-    #print("name:" + runner.__name__)
+
     agent = runner.create_player()
-    agent.restore('runs/Exomy/nn/Exomy.pth')
+    agent.restore('runs/testModel.pth')
+
     inputs = {
         'obs' : torch.zeros((1,) + agent.obs_shape).to(agent.device),
         'rnn_states' : agent.states
@@ -126,14 +129,16 @@ def launch_rlg_hydra(cfg: DictConfig):
     onnx_model = onnx.load("exomy.onnx")
     onnx.checker.check_model(onnx_model)
     
-    observation = numpy.array([ 0.0200, -0.5400, -0.3805,  0.4010,  0.0090, -1.0108, -1.0094, -1.0085,
+    observation = torch.tensor([ 0.0200, -0.5400, -0.3805,  0.4010,  0.0090, -1.0108, -1.0094, -1.0085,
         -1.0064, -1.0043, -1.0028, -1.0013, -0.9998, -0.9986, -0.9972, -0.6981,
         -0.6973, -0.6967, -0.6961, -0.6954, -0.6946, -0.6938, -0.6930, -0.6921,
         -0.6916, -0.5334, -0.5330, -0.5325, -0.5320, -0.5315, -0.5311, -0.5306,
         -0.5301, -0.5296, -0.5292, -0.4315, -0.4312, -0.4309, -0.4305, -0.4302,
         -0.4300, -0.4296, -0.4293, -0.4290, -0.4287, -0.3622, -0.3620, -0.3618,
-        -0.3616, -0.3614, -0.3612, -0.3610, -0.3608, -0.3606, -0.3603], numpy.float32)
-    #observation.astype(numpy.float32)
+        -0.3616, -0.3614, -0.3612, -0.3610, -0.3608, -0.3606, -0.3603]).unsqueeze(0).numpy()
+    
+    
+    
     ort_model = ort.InferenceSession("exomy.onnx")
 
     outputs = ort_model.run(
