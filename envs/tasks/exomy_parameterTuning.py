@@ -270,7 +270,7 @@ class Exomy_parameterTuning(VecTask):
         y = TargetRadius * torch.sin(alpha) + TargetCordy
         self.target_root_positions[env_ids, 0] = x
         self.target_root_positions[env_ids, 1] = y
-        self.target_root_positions[env_ids, 2] = 0.1
+        self.target_root_positions[env_ids, 2] = 0.7
         self.marker_positions[env_ids] = self.target_root_positions[env_ids]
         # copter "position" is at the bottom of the legs, so shift the target up so it visually aligns better
         #self.marker_positions[env_ids, 2] += 0.4
@@ -638,7 +638,7 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     vel_penalty = ((velocityML + velocityMR) * velocityCondition)
 
     # Goal reward for at komme indenfor xx meter af current target
-    goal_reward = torch.where(target_dist < 0.2, 1, 0)
+    goal_reward = torch.where(target_dist < 0.1, 1, 0)
 
     # Penalty for moving too far away from target
     distanceReset_penalty = torch.where(target_dist > 5, 1, 0)
@@ -665,13 +665,13 @@ def compute_exomy_reward(root_euler, reset_buf, progress_buf, max_episode_length
     # Constants for penalties and rewards:
     pos_reward = pos_reward * pos_reward * 10.0
     # target_dist_diff = torch.clamp(target_dist_diff* target_dist_diff_condition * 600, -10, 10)
-    goal_reward = goal_reward * 50.0
+    goal_reward = goal_reward * 100.0
     vel_penalty = torch.clamp(vel_penalty * 0.1, -4.0, 0.0)
     heading_reward = heading_reward * 6
     #tilt_penalty = tilt_penalty * 1
     distanceReset_penalty = distanceReset_penalty * 50
     # timeReset_penalty = timeReset_penalty * 20
-    time_penalty = torch.clamp(time_penalty * 0.02, 20, 0)
+    time_penalty = torch.clamp(time_penalty * 0.08, 0, 25)
     #pointTurn_reward = pointTurn_reward * 0.1
     # print("goal: ", pos_reward[0], goal_reward[0], vel_penalty[0], heading_reward[0], tilt_penalty[0], distanceReset_penalty[0], timeReset_penalty[0], time_penalty[0])
     # print(pos_reward[0])
