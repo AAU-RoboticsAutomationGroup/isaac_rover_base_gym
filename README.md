@@ -1,3 +1,6 @@
+# General
+This is a base setup for using ExoMy in Isaac Gym v3, without implemention of reward functions, etc.
+
 # Useful commands
 [Commands](docs/Commands.md)
 
